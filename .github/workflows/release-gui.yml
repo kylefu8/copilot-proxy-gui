@@ -32,6 +32,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install proxy dependencies
+        run: cd copilot-proxy && bun install
+
       - name: Generate icons
         run: node scripts/generate-icons.cjs
 
@@ -39,6 +42,7 @@ jobs:
         run: npx vite build
 
       - name: Build proxy server
+        shell: bash
         run: |
           mkdir -p build
           bun build --compile --target=bun-windows-x64 copilot-proxy/src/main.ts --outfile build/copilot-proxy-server.exe
@@ -72,6 +76,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Install proxy dependencies
+        run: cd copilot-proxy && bun install
 
       - name: Generate icons
         run: node scripts/generate-icons.cjs
@@ -113,6 +120,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Install proxy dependencies
+        run: cd copilot-proxy && bun install
 
       - name: Generate icons
         run: node scripts/generate-icons.cjs
