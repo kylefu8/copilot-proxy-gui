@@ -147,7 +147,11 @@ export async function detectAccountType() {
   if (runtime === 'web') {
     return { detected: false, error: 'Requires desktop runtime' }
   }
-  return invokeDesktop('detect_account_type')
+  const result = await invokeDesktop('detect_account_type')
+  if (result && result.error) {
+    throw new Error(result.message || 'Unknown error')
+  }
+  return result
 }
 
 /**
@@ -206,5 +210,9 @@ export async function fetchModelsFromCopilot(accountType) {
   if (runtime === 'web') {
     throw new Error('Requires desktop runtime (Electron).')
   }
-  return invokeDesktop('fetch_models', { accountType })
+  const result = await invokeDesktop('fetch_models', { accountType })
+  if (result && result.error) {
+    throw new Error(result.message || 'Unknown error')
+  }
+  return result
 }

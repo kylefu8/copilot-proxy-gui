@@ -1093,9 +1093,9 @@ ipcMain.handle('copilot-proxy:invoke', async (_event, request) => {
       return { ok: true }
     }
     case 'detect_account_type':
-      return detectAccountType()
+      return detectAccountType().catch(e => ({ error: true, message: e.message || String(e) }))
     case 'fetch_models':
-      return fetchModels(payload)
+      return fetchModels(payload).catch(e => ({ error: true, message: e.message || String(e) }))
     case 'launch_claude_code':
       return launchClaudeCode(payload)
     case 'write_claude_env':
