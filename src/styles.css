@@ -257,6 +257,15 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .icon-btn:hover { border-color: var(--accent-border); color: var(--text); }
 
+/* Language toggle */
+.lang-toggle {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  min-width: 30px;
+  text-align: center;
+}
+
 /* Control bar */
 .control-bar {
   background: var(--card);

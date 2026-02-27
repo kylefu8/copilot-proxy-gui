@@ -12,7 +12,8 @@ export const defaultConfig = {
   autoStart: false,
   defaultModel: '',
   defaultSmallModel: '',
-  theme: 'midnight',
+  theme: 'frost',
+  lang: 'zh',
   riskAcceptedAt: null,       // ISO timestamp when user accepted risk
   riskConfigFingerprint: '',  // fingerprint of config at acceptance time
 }
@@ -30,11 +31,11 @@ export function needsRiskAcceptance(config) {
 }
 
 export const themes = [
-  { id: 'frost', label: '薰衣草' },
-  { id: 'sakura', label: '蜜桃' },
-  { id: 'cherry', label: '樱花' },
-  { id: 'midnight', label: '星空' },
-  { id: 'aurora', label: '极光' },
+  { id: 'frost' },
+  { id: 'sakura' },
+  { id: 'cherry' },
+  { id: 'midnight' },
+  { id: 'aurora' },
 ]
 
 export function applyTheme(themeId) {

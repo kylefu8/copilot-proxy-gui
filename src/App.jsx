@@ -6,6 +6,7 @@ import { MainView } from './features/main/MainView'
 import { RiskDialog } from './features/main/RiskDialog'
 import { SettingsPage } from './features/settings/SettingsPage'
 import { applyTheme, configFingerprint, loadConfig, needsRiskAcceptance, resetConfig, saveConfig, toCliArgs } from './core/config-store'
+import { I18nProvider, useI18n } from './core/i18n'
 import { getUsage, waitForReady } from './core/proxy-api'
 import {
   deleteToken,
@@ -20,7 +21,8 @@ import {
   stopService,
 } from './core/service-manager'
 
-export default function App() {
+function AppInner() {
+  const { t } = useI18n()
   const [page, setPage] = useState('main') // 'main' | 'settings' | 'about'
   const [config, setConfig] = useState(() => loadConfig())
   const [service, setService] = useState(() => getServiceState())
@@ -50,7 +52,7 @@ export default function App() {
 
   // Apply theme on load and whenever it changes
   useEffect(() => {
-    applyTheme(config.theme || 'midnight')
+    applyTheme(config.theme || 'frost')
   }, [config.theme])
 
   // Listen for close-requested from main process (tray close confirmation)
@@ -115,11 +117,11 @@ export default function App() {
 
   const persistConfig = useCallback(() => {
     saveConfig(config)
-    showToast('配置已保存，重启 Proxy 后生效')
-  }, [config, showToast])
+    showToast(t('config.saved'))
+  }, [config, showToast, t])
 
   const handleResetConfig = useCallback(async () => {
-    if (confirm('确定要恢复所有默认设置、停止正在运行的服务并删除登录 Token 吗？')) {
+    if (confirm(t('config.resetConfirm'))) {
       // Stop service first if running
       const svcState = getServiceState()
       if (svcState.status === 'running') {
@@ -176,19 +178,19 @@ export default function App() {
         const auth = await getAuthStatus()
         setAuthStatus(auth)
         if (!auth.hasToken) {
-          setService(prev => ({ ...prev, status: 'error', lastError: '请先在设置中登录 GitHub' }))
+          setService(prev => ({ ...prev, status: 'error', lastError: t('svc.needLogin') }))
           return
         }
       }
       catch {
-        setService(prev => ({ ...prev, status: 'error', lastError: '无法检查登录状态' }))
+        setService(prev => ({ ...prev, status: 'error', lastError: t('svc.cannotCheckAuth') }))
         return
       }
     }
 
     // Check model selection
     if (!config.defaultModel) {
-      setService(prev => ({ ...prev, status: 'error', lastError: '请先选择默认模型' }))
+      setService(prev => ({ ...prev, status: 'error', lastError: t('svc.needModel') }))
       return
     }
 
@@ -347,5 +349,31 @@ export default function App() {
     )}
     {toast && <div className="toast">{toast}</div>}
     </>
+  )
+}
+
+export default function App() {
+  const [config] = useState(() => loadConfig())
+
+  // Sync language to main process (tray menu etc.)
+  useEffect(() => {
+    if (window.copilotProxyDesktop?.invoke) {
+      window.copilotProxyDesktop.invoke('set_lang', { lang: config.lang || 'zh' })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleChangeLang = useCallback((newLang) => {
+    const current = loadConfig()
+    saveConfig({ ...current, lang: newLang })
+    // Notify main process so tray menu updates
+    if (window.copilotProxyDesktop?.invoke) {
+      window.copilotProxyDesktop.invoke('set_lang', { lang: newLang })
+    }
+  }, [])
+
+  return (
+    <I18nProvider lang={config.lang || 'zh'} onChangeLang={handleChangeLang}>
+      <AppInner />
+    </I18nProvider>
   )
 }

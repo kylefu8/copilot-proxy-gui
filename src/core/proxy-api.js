@@ -28,5 +28,5 @@ export async function waitForReady(baseUrl, { maxRetries = 30, interval = 1000 }
       await new Promise(r => setTimeout(r, interval))
     }
   }
-  throw new Error('服务启动超时，请检查日志')
+  throw new Error('Service start timeout, please check the logs')
 }

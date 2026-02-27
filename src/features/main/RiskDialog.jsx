@@ -2,14 +2,17 @@
  * Risk acceptance dialog — shows the two WARNING messages from README.
  * Must be accepted before starting the proxy service.
  */
+import { useI18n } from '../../core/i18n'
+
 export function RiskDialog({ onAccept, onCancel }) {
+  const { t } = useI18n()
   return (
     <div className="risk-overlay" onClick={onCancel}>
       <div className="risk-dialog" onClick={e => e.stopPropagation()}>
-        <h2 className="risk-title">⚠️ 使用风险提示</h2>
+        <h2 className="risk-title">{t('risk.title')}</h2>
 
         <div className="risk-warning-box">
-          <p className="risk-warning-label">警告 1</p>
+          <p className="risk-warning-label">{t('risk.warn1')}</p>
           <p>
             This is a <strong>reverse-engineered</strong> proxy of GitHub Copilot API.
             It is <strong>not supported by GitHub</strong>, and may break unexpectedly.
@@ -18,7 +21,7 @@ export function RiskDialog({ onAccept, onCancel }) {
         </div>
 
         <div className="risk-warning-box">
-          <p className="risk-warning-label">警告 2 — GitHub 安全提示</p>
+          <p className="risk-warning-label">{t('risk.warn2')}</p>
           <p>
             Excessive automated or scripted use of Copilot (including rapid or bulk
             requests, such as via automated tools) may trigger GitHub's abuse-detection
@@ -45,15 +48,15 @@ export function RiskDialog({ onAccept, onCancel }) {
         </div>
 
         <p className="risk-summary">
-          点击「我接受风险」即表示你已阅读并理解上述警告，同意自行承担所有使用风险。
+          {t('risk.summary')}
         </p>
 
         <div className="risk-actions">
           <button type="button" className="risk-btn-cancel" onClick={onCancel}>
-            取消
+            {t('cancel')}
           </button>
           <button type="button" className="risk-btn-accept" onClick={onAccept}>
-            我接受风险
+            {t('risk.accept')}
           </button>
         </div>
       </div>

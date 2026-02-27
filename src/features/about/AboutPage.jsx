@@ -1,11 +1,13 @@
 import { useEffect, useRef } from 'react'
 import { resizeWindow } from '../../core/service-manager'
+import { useI18n } from '../../core/i18n'
 
 const APP_VERSION = '0.1.0'
 const GUI_REPO = 'https://github.com/kylefu8/copilot-proxy-gui'
 const UPSTREAM_REPO = 'https://github.com/Jer-y/copilot-proxy'
 
 export function AboutPage({ onBack }) {
+  const { t } = useI18n()
   const contentRef = useRef(null)
 
   useEffect(() => {
@@ -30,8 +32,8 @@ export function AboutPage({ onBack }) {
     <div className="settings-page">
       <div className="settings-page-inner" ref={contentRef}>
         <header className="settings-header">
-          <button type="button" className="back-btn" onClick={onBack}>← 返回</button>
-          <h1>关于</h1>
+          <button type="button" className="back-btn" onClick={onBack}>{t('back')}</button>
+          <h1>{t('about.title')}</h1>
         </header>
 
         <section className="settings-section">
@@ -39,12 +41,12 @@ export function AboutPage({ onBack }) {
           <h2 className="about-title">Copilot Proxy GUI</h2>
           <p className="about-version">v{APP_VERSION}</p>
           <p className="about-desc">
-            一个桌面客户端，用于管理和运行 Copilot Proxy 服务，将 GitHub Copilot 作为 OpenAI 兼容的 API 使用。
+            {t('about.desc')}
           </p>
         </section>
 
         <section className="settings-section">
-          <h2>项目地址</h2>
+          <h2>{t('about.repoTitle')}</h2>
           <div className="about-links">
             <button type="button" className="about-link-btn" onClick={() => openLink(GUI_REPO)}>
               <span className="about-link-icon">📦</span>
@@ -57,9 +59,9 @@ export function AboutPage({ onBack }) {
         </section>
 
         <section className="settings-section">
-          <h2>致谢</h2>
+          <h2>{t('about.credits')}</h2>
           <p className="about-desc">
-            本项目基于以下开源项目开发，特此感谢：
+            {t('about.creditsDesc')}
           </p>
           <div className="about-links">
             <button type="button" className="about-link-btn" onClick={() => openLink(UPSTREAM_REPO)}>
@@ -67,7 +69,7 @@ export function AboutPage({ onBack }) {
               <div>
                 <div className="about-link-title">copilot-proxy</div>
                 <div className="about-link-url">{UPSTREAM_REPO}</div>
-                <div className="about-link-desc">by Jer-y — 核心代理服务实现</div>
+                <div className="about-link-desc">{t('about.upstreamDesc')}</div>
               </div>
             </button>
           </div>

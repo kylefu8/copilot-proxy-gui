@@ -1,4 +1,4 @@
-const fs = require('node:fs')
+﻿const fs = require('node:fs')
 const os = require('node:os')
 const path = require('node:path')
 const https = require('node:https')
@@ -95,6 +95,78 @@ const preloadPath = path.resolve(__dirname, 'preload.cjs')
 let mainWin = null
 let tray = null
 let isQuitting = false
+let currentLang = 'zh'  // synced from renderer via IPC
+
+// ─── Main-process i18n (tray menu & error messages) ─────────────
+const mainI18n = {
+  zh: {
+    'tray.stopped': '已停止',
+    'tray.running': '运行中',
+    'tray.model': '模型',
+    'tray.statusRunning': '● 运行中',
+    'tray.statusStopped': '○ 已停止',
+    'tray.stop': '■ 停止服务',
+    'tray.start': '▶ 启动服务',
+    'tray.show': '显示窗口',
+    'tray.quit': '退出',
+    'err.loginFirst': '请先登录 GitHub',
+    'err.copilotToken': '获取 Copilot token 失败: HTTP ',
+    'err.detectFailed': '无法自动检测，默认使用 individual',
+    'err.modelList': '获取模型列表失败: HTTP ',
+    'err.deviceCode': '获取验证码失败: HTTP ',
+    'err.tokenSaveFailed': 'Token 保存失败: ',
+    'err.tokenWriteFailed': 'Token 写入失败: ',
+    'err.expired': '验证码已过期',
+    'err.expiredRetry': '❌ 验证码已过期，请重试',
+    'err.denied': '授权被拒绝',
+    'err.deniedIcon': '❌ 授权被拒绝',
+    'dialog.selectWorkspace': '选择 Claude Code 工作空间',
+    'dialog.authTitle': 'GitHub 登录验证',
+    'auth.hint': '请在浏览器中输入以下验证码',
+    'auth.copy': '📋 复制验证码',
+    'auth.browserOpened': '浏览器已自动打开验证页面',
+    'auth.waiting': '⏳ 等待授权...',
+    'auth.copied': '✅ 已复制',
+    'auth.copyFailed': '⚠️ 请手动复制',
+    'auth.canceled': '用户关闭了登录窗口',
+    'auth.success': '✅ 登录成功！',
+    'auth.retrying': '重试中',
+  },
+  en: {
+    'tray.stopped': 'Stopped',
+    'tray.running': 'Running',
+    'tray.model': 'Model',
+    'tray.statusRunning': '● Running',
+    'tray.statusStopped': '○ Stopped',
+    'tray.stop': '■ Stop Service',
+    'tray.start': '▶ Start Service',
+    'tray.show': 'Show Window',
+    'tray.quit': 'Quit',
+    'err.loginFirst': 'Please log in to GitHub first',
+    'err.copilotToken': 'Failed to get Copilot token: HTTP ',
+    'err.detectFailed': 'Cannot auto-detect, defaulting to individual',
+    'err.modelList': 'Failed to fetch model list: HTTP ',
+    'err.deviceCode': 'Failed to get device code: HTTP ',
+    'err.tokenSaveFailed': 'Token save failed: ',
+    'err.tokenWriteFailed': 'Token write failed: ',
+    'err.expired': 'Verification code expired',
+    'err.expiredRetry': '❌ Code expired, please retry',
+    'err.denied': 'Authorization denied',
+    'err.deniedIcon': '❌ Authorization denied',
+    'dialog.selectWorkspace': 'Select Claude Code Workspace',
+    'dialog.authTitle': 'GitHub Login Verification',
+    'auth.hint': 'Enter the following code in your browser',
+    'auth.copy': '📋 Copy Code',
+    'auth.browserOpened': 'Browser opened the verification page',
+    'auth.waiting': '⏳ Waiting for authorization...',
+    'auth.copied': '✅ Copied',
+    'auth.copyFailed': '⚠️ Please copy manually',
+    'auth.canceled': 'User closed the login window',
+    'auth.success': '✅ Login successful!',
+    'auth.retrying': 'retrying',
+  },
+}
+function mt(key) { return mainI18n[currentLang]?.[key] ?? mainI18n.zh[key] ?? key }
 
 const GITHUB_BASE_URL = 'https://github.com'
 const GITHUB_CLIENT_ID = 'Iv1.b507a08c87ecfe98'
@@ -398,7 +470,7 @@ async function launchClaudeCode(payload) {
   // Let user pick a workspace folder
   const win = mainWin
   const result = await dialog.showOpenDialog(win, {
-    title: '选择 Claude Code 工作空间',
+    title: mt('dialog.selectWorkspace'),
     properties: ['openDirectory'],
   })
 
@@ -529,7 +601,7 @@ async function detectAccountType() {
   // 1. Read GitHub token
   const githubToken = readToken()
   if (!githubToken) {
-    throw new Error('请先登录 GitHub')
+    throw new Error(mt('err.loginFirst'))
   }
 
   // 2. Get a Copilot token
@@ -542,7 +614,7 @@ async function detectAccountType() {
   })
 
   if (!tokenRes.ok) {
-    throw new Error(`获取 Copilot token 失败: HTTP ${tokenRes.status}`)
+    throw new Error(`${mt('err.copilotToken')}${tokenRes.status}`)
   }
 
   const copilotToken = tokenRes.json.token
@@ -573,7 +645,7 @@ async function detectAccountType() {
     }
   }
 
-  return { accountType: 'individual', detected: false, message: '无法自动检测，默认使用 individual' }
+  return { accountType: 'individual', detected: false, message: mt('err.detectFailed') }
 }
 
 // ─── Fetch models directly from Copilot API ─────────────────────────
@@ -584,7 +656,7 @@ async function fetchModels(payload) {
   // 1. Read GitHub token
   const githubToken = readToken()
   if (!githubToken) {
-    throw new Error('请先登录 GitHub')
+    throw new Error(mt('err.loginFirst'))
   }
 
   // 2. Get a Copilot token
@@ -597,7 +669,7 @@ async function fetchModels(payload) {
   })
 
   if (!tokenRes.ok) {
-    throw new Error(`获取 Copilot token 失败: HTTP ${tokenRes.status}`)
+    throw new Error(`${mt('err.copilotToken')}${tokenRes.status}`)
   }
 
   const copilotToken = tokenRes.json.token
@@ -617,7 +689,7 @@ async function fetchModels(payload) {
   }, 10000)
 
   if (!modelsRes.ok) {
-    throw new Error(`获取模型列表失败: HTTP ${modelsRes.status}`)
+    throw new Error(`${mt('err.modelList')}${modelsRes.status}`)
   }
 
   return modelsRes.json
@@ -636,7 +708,7 @@ async function authDeviceCodeFlow(payload) {
   })
 
   if (!response.ok) {
-    throw new Error(`获取验证码失败: HTTP ${response.status} - ${response.raw}`)
+    throw new Error(`${mt('err.deviceCode')}${response.status} - ${response.raw}`)
   }
 
   const data = response.json
@@ -662,7 +734,7 @@ async function authDeviceCodeFlow(payload) {
     maximizable: false,
     parent,
     modal: true,
-    title: 'GitHub 登录验证',
+    title: mt('dialog.authTitle'),
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -697,19 +769,19 @@ async function authDeviceCodeFlow(payload) {
   .status { font-size: 13px; margin-top: 10px; color: ${t.yellow}; }
   .success { color: ${t.green}; }
 </style></head><body>
-  <div class="hint">请在浏览器中输入以下验证码</div>
+  <div class="hint">${mt('auth.hint')}</div>
   <div class="code">${safeCode}</div>
   <div class="copy-row">
-    <button class="copy-btn" id="copyBtn">📋 复制验证码</button>
+    <button class="copy-btn" id="copyBtn">${mt('auth.copy')}</button>
     <span class="copied" id="copied"></span>
   </div>
-  <div class="hint">浏览器已自动打开验证页面<br><a href="${safeUri}">${safeUri}</a></div>
-  <div class="status" id="status">⏳ 等待授权...</div>
+  <div class="hint">${mt('auth.browserOpened')}<br><a href="${safeUri}">${safeUri}</a></div>
+  <div class="status" id="status">${mt('auth.waiting')}</div>
   <script>
     function copyCode() {
       var code = '${safeCode}';
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(code).then(function(){ document.getElementById('copied').textContent='✅ 已复制' }).catch(fallbackCopy);
+        navigator.clipboard.writeText(code).then(function(){ document.getElementById('copied').textContent='${mt('auth.copied')}' }).catch(fallbackCopy);
       } else { fallbackCopy(); }
     }
     function fallbackCopy() {
@@ -719,7 +791,7 @@ async function authDeviceCodeFlow(payload) {
       ta.style.opacity = '0';
       document.body.appendChild(ta);
       ta.select();
-      try { document.execCommand('copy'); document.getElementById('copied').textContent='✅ 已复制'; } catch(e) { document.getElementById('copied').textContent='⚠️ 请手动复制'; }
+      try { document.execCommand('copy'); document.getElementById('copied').textContent='${mt('auth.copied')}'; } catch(e) { document.getElementById('copied').textContent='${mt('auth.copyFailed')}'; }
       document.body.removeChild(ta);
     }
     document.getElementById('copyBtn').onclick = copyCode;
@@ -735,7 +807,7 @@ async function authDeviceCodeFlow(payload) {
     authChildWin.on('closed', () => {
       closed = true
       authChildWin = null
-      resolve({ status: 'canceled', message: '用户关闭了登录窗口' })
+      resolve({ status: 'canceled', message: mt('auth.canceled') })
     })
 
     let pollCount = 0
@@ -760,7 +832,7 @@ async function authDeviceCodeFlow(payload) {
         })
 
         if (!pollResp.ok) {
-          setChildStatus(`⏳ 等待授权... (${pollCount})`)
+          setChildStatus(`${mt('auth.waiting')} (${pollCount})`)
           setTimeout(poll, interval * 1000)
           return
         }
@@ -773,15 +845,15 @@ async function authDeviceCodeFlow(payload) {
             writeToken(json.access_token)
           } catch (writeErr) {
             console.error('Failed to write token:', writeErr)
-            setChildStatus('❌ Token 保存失败: ' + (writeErr.message || writeErr), 'status')
+            setChildStatus('❌ ' + mt('err.tokenSaveFailed') + (writeErr.message || writeErr), 'status')
             setTimeout(() => {
               if (authChildWin && !authChildWin.isDestroyed()) authChildWin.close()
             }, 3000)
-            resolve({ status: 'error', message: 'Token 写入失败: ' + (writeErr.message || writeErr) })
+            resolve({ status: 'error', message: mt('err.tokenWriteFailed') + (writeErr.message || writeErr) })
             return
           }
           // Show success briefly then close
-          setChildStatus('✅ 登录成功！', 'status success')
+          setChildStatus(mt('auth.success'), 'status success')
           setTimeout(() => {
             if (authChildWin && !authChildWin.isDestroyed()) authChildWin.close()
           }, 1500)
@@ -792,27 +864,27 @@ async function authDeviceCodeFlow(payload) {
         if (json && json.error === 'slow_down') {
           interval += 2
         } else if (json && json.error === 'expired_token') {
-          setChildStatus('❌ 验证码已过期，请重试')
+          setChildStatus(mt('err.expiredRetry'))
           setTimeout(() => {
             if (authChildWin && !authChildWin.isDestroyed()) authChildWin.close()
           }, 2000)
-          resolve({ status: 'expired', message: '验证码已过期' })
+          resolve({ status: 'expired', message: mt('err.expired') })
           return
         } else if (json && json.error === 'access_denied') {
-          setChildStatus('❌ 授权被拒绝')
+          setChildStatus(mt('err.deniedIcon'))
           setTimeout(() => {
             if (authChildWin && !authChildWin.isDestroyed()) authChildWin.close()
           }, 2000)
-          resolve({ status: 'error', message: '授权被拒绝' })
+          resolve({ status: 'error', message: mt('err.denied') })
           return
         }
 
         // Still pending, continue polling — show attempt count so user knows it's alive
-        setChildStatus(`⏳ 等待授权... (${pollCount})`)
+        setChildStatus(`${mt('auth.waiting')} (${pollCount})`)
         setTimeout(poll, interval * 1000)
       } catch (e) {
         console.warn('Auth poll error, retrying:', e.message || e)
-        setChildStatus(`⏳ 等待授权... 重试中 (${pollCount})`)
+        setChildStatus(`${mt('auth.waiting')} ${mt('auth.retrying')} (${pollCount})`)
         if (!closed) setTimeout(poll, interval * 1000)
       }
     }
@@ -828,7 +900,7 @@ const icons = require('./icons.cjs')
 function createTray() {
   const icon = icons.createTrayIcon('#888888')
   tray = new Tray(icon)
-  tray.setToolTip('Copilot Proxy - 已停止')
+  tray.setToolTip(`Copilot Proxy - ${mt('tray.stopped')}`)
   updateTrayMenu()
 
   tray.on('double-click', () => {
@@ -843,12 +915,12 @@ function updateTrayStatus() {
   if (!tray) return
   const running = !!serviceChild
   const color = running ? '#22c55e' : '#888888'
-  const statusText = running ? '运行中' : '已停止'
+  const statusText = running ? mt('tray.running') : mt('tray.stopped')
   tray.setImage(icons.createTrayIcon(color))
 
   let tooltip = `Copilot Proxy - ${statusText}`
   if (running && lastModelName) {
-    tooltip += `\n模型: ${lastModelName}`
+    tooltip += `\n${mt('tray.model')}: ${lastModelName}`
   }
   tray.setToolTip(tooltip)
   updateTrayMenu()
@@ -857,7 +929,7 @@ function updateTrayStatus() {
 function updateTrayMenu() {
   if (!tray) return
   const running = !!serviceChild
-  const statusText = running ? '● 运行中' : '○ 已停止'
+  const statusText = running ? mt('tray.statusRunning') : mt('tray.statusStopped')
 
   const menuItems = [
     { label: statusText, enabled: false },
@@ -866,7 +938,7 @@ function updateTrayMenu() {
 
   if (running) {
     menuItems.push({
-      label: '■ 停止服务',
+      label: mt('tray.stop'),
       click: () => {
         serviceStop()
         // Notify renderer so UI stays in sync
@@ -875,7 +947,7 @@ function updateTrayMenu() {
     })
   } else {
     menuItems.push({
-      label: '▶ 启动服务',
+      label: mt('tray.start'),
       click: () => {
         if (lastServicePayload) {
           // Replay last known config
@@ -900,7 +972,7 @@ function updateTrayMenu() {
   menuItems.push(
     { type: 'separator' },
     {
-      label: '显示窗口',
+      label: mt('tray.show'),
       click: () => {
         if (mainWin) {
           mainWin.show()
@@ -910,7 +982,7 @@ function updateTrayMenu() {
     },
     { type: 'separator' },
     {
-      label: '退出',
+      label: mt('tray.quit'),
       click: () => {
         isQuitting = true
         app.quit()
@@ -1036,6 +1108,14 @@ ipcMain.handle('copilot-proxy:invoke', async (_event, request) => {
       const url = payload?.url
       if (url && (url.startsWith('https://') || url.startsWith('http://'))) {
         shell.openExternal(url)
+      }
+      return { ok: true }
+    }
+    case 'set_lang': {
+      const lang = payload?.lang
+      if (lang === 'zh' || lang === 'en') {
+        currentLang = lang
+        updateTrayStatus()
       }
       return { ok: true }
     }

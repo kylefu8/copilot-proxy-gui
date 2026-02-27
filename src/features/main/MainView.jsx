@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { resizeWindow, launchClaudeCode, writeClaudeEnv, clearClaudeEnv, checkClaudeEnv } from '../../core/service-manager'
 import { themes, applyTheme } from '../../core/config-store'
+import { useI18n } from '../../core/i18n'
 
 export function MainView({
   config,
@@ -23,6 +24,7 @@ export function MainView({
   showToast,
   authStatus,
 }) {
+  const { t, lang, setLang } = useI18n()
   const [usage, setUsage] = useState(null)
   const [usageLoading, setUsageLoading] = useState(false)
   const [usageError, setUsageError] = useState('')
@@ -138,7 +140,7 @@ export function MainView({
   const premium = usage?.quota_snapshots?.premium_interactions
 
   const statusColor = serviceBusy ? '#f0a050' : isRunning ? '#6ee7b7' : service.status === 'error' ? '#ff9191' : '#8b99b5'
-  const statusLabel = serviceBusy ? (isRunning ? '停止中' : '启动中') : isRunning ? '运行中' : service.status === 'error' ? '错误' : '已停止'
+  const statusLabel = serviceBusy ? (isRunning ? t('status.stopping') : t('status.starting')) : isRunning ? t('status.running') : service.status === 'error' ? t('status.error') : t('status.stopped')
 
   return (
     <div className={`main-layout ${logsOpen ? 'logs-open' : ''}`}>
@@ -155,35 +157,38 @@ export function MainView({
           </div>
           <div className="row gap-8">
             <div className="theme-menu-wrap" ref={themeRef}>
-              <button type="button" className="icon-btn" onClick={() => setThemeOpen(v => !v)} title="主题">
+              <button type="button" className="icon-btn" onClick={() => setThemeOpen(v => !v)} title={t('header.theme')}>
                 🎨
               </button>
               {themeOpen && (
                 <div className="theme-popup">
-                  {themes.map(t => (
+                  {themes.map(th => (
                     <button
-                      key={t.id}
+                      key={th.id}
                       type="button"
-                      className={`theme-popup-item${config.theme === t.id ? ' active' : ''}`}
+                      className={`theme-popup-item${config.theme === th.id ? ' active' : ''}`}
                       onClick={() => {
-                        onChangeConfig('theme', t.id)
-                        applyTheme(t.id)
+                        onChangeConfig('theme', th.id)
+                        applyTheme(th.id)
                         setThemeOpen(false)
                       }}
                     >
-                      {t.label}
+                      {t(`theme.${th.id}`)}
                     </button>
                   ))}
                 </div>
               )}
             </div>
-            <button type="button" className="icon-btn" onClick={() => setLogsOpen(v => !v)} title="日志">
+            <button type="button" className="icon-btn lang-toggle" onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} title={t('header.lang')}>
+              {lang === 'zh' ? 'EN' : '中'}
+            </button>
+            <button type="button" className="icon-btn" onClick={() => setLogsOpen(v => !v)} title={t('header.logs')}>
               📋
             </button>
-            <button type="button" className="icon-btn" onClick={onOpenSettings} title="设置">
+            <button type="button" className="icon-btn" onClick={onOpenSettings} title={t('header.settings')}>
               ⚙
             </button>
-            <button type="button" className="icon-btn" onClick={onOpenAbout} title="关于">
+            <button type="button" className="icon-btn" onClick={onOpenAbout} title={t('header.about')}>
               ℹ
             </button>
           </div>
@@ -198,16 +203,16 @@ export function MainView({
               onClick={isRunning ? onStop : onStart}
               disabled={serviceBusy}
             >
-              {serviceBusy ? (isRunning ? '停止中...' : '启动中...') : isRunning ? '⏹ 停止' : '▶ 启动'}
+              {serviceBusy ? (isRunning ? t('svc.stopping') : t('svc.starting')) : isRunning ? t('svc.stop') : t('svc.start')}
             </button>
 
             <div className="service-info">
-              <span className="info-label">端口</span>
+              <span className="info-label">{t('svc.port')}</span>
               <span className="info-value">{config.port}</span>
             </div>
 
             <div className="service-info flex-fill">
-              <span className="info-label">模型</span>
+              <span className="info-label">{t('svc.model')}</span>
               <span className="info-value">
                 {config.defaultModel || '—'}
                 {config.defaultSmallModel ? ` / ${config.defaultSmallModel}` : ''}
@@ -216,42 +221,42 @@ export function MainView({
           </div>
 
           {service.lastError && <p className="error">{service.lastError}</p>}
-          {!service.lastError && hasAuth && hasModels && !config.defaultModel && !isRunning && <p className="hint" style={{ margin: '6px 0 0' }}>⚠ 请先选择默认模型再启动</p>}
+          {!service.lastError && hasAuth && hasModels && !config.defaultModel && !isRunning && <p className="hint" style={{ margin: '6px 0 0' }}>{t('svc.selectModelFirst')}</p>}
         </section>
 
         {/* Model selection */}
         <section className="control-bar model-bar">
           <div className="row gap-8">
-            <label className="model-select-row" title="主力模型，用于处理复杂任务和长文本推理，如 Claude Sonnet / GPT-4o 等">
-              <span className="info-label">默认模型</span>
+            <label className="model-select-row" title={t('model.defaultTooltip')}>
+              <span className="info-label">{t('model.default')}</span>
               <select
                 value={config.defaultModel}
-                onChange={(e) => { onChangeAndSaveConfig('defaultModel', e.target.value); showToast('模型选择已保存') }}
+                onChange={(e) => { onChangeAndSaveConfig('defaultModel', e.target.value); showToast(t('model.saved')) }}
                 disabled={!hasModels || modelsLoading}
               >
-                <option value="">{modelsLoading ? '加载中...' : '请选择'}</option>
+                <option value="">{modelsLoading ? t('loading') : t('model.select')}</option>
                 {modelOptions.map(m => (
                   <option key={m.id} value={m.id}>{m.id}</option>
                 ))}
               </select>
             </label>
-            <label className="model-select-row" title="轻量快速模型，用于简单补全、摘要等低延迟场景，如 GPT-4o-mini / Claude Haiku 等（可选）">
-              <span className="info-label">小模型</span>
+            <label className="model-select-row" title={t('model.smallTooltip')}>
+              <span className="info-label">{t('model.small')}</span>
               <select
                 value={config.defaultSmallModel}
-                onChange={(e) => { onChangeAndSaveConfig('defaultSmallModel', e.target.value); showToast('模型选择已保存') }}
+                onChange={(e) => { onChangeAndSaveConfig('defaultSmallModel', e.target.value); showToast(t('model.saved')) }}
                 disabled={!hasModels || modelsLoading}
               >
-                <option value="">可选</option>
+                <option value="">{t('model.optional')}</option>
                 {modelOptions.map(m => (
                   <option key={m.id} value={m.id}>{m.id}</option>
                 ))}
               </select>
             </label>
           </div>
-          {!hasAuth && !modelsLoading && <p className="hint">请先到设置中登录 GitHub</p>}
-          {hasAuth && !hasModels && !modelsLoading && !modelsError && <p className="hint">正在加载模型列表...</p>}
-          {hasAuth && hasModels && !config.defaultModel && !isRunning && <p className="hint">请先选择默认模型再启动</p>}
+          {!hasAuth && !modelsLoading && <p className="hint">{t('model.loginFirst')}</p>}
+          {hasAuth && !hasModels && !modelsLoading && !modelsError && <p className="hint">{t('model.loadingList')}</p>}
+          {hasAuth && hasModels && !config.defaultModel && !isRunning && <p className="hint">{t('model.selectFirst')}</p>}
           {modelsError && <p className="error">{modelsError}</p>}
           {isRunning && config.defaultModel && (
             <div className="row gap-8" style={{ marginTop: 4 }}>
@@ -266,16 +271,16 @@ export function MainView({
                       setClaudeLaunching(false)
                       return
                     }
-                    showToast('Claude Code 已启动')
+                    showToast(t('claude.launched'))
                   } catch (err) {
-                    showToast('启动失败: ' + String(err))
+                    showToast(t('claude.launchFailed') + String(err))
                   } finally {
                     setClaudeLaunching(false)
                   }
                 }}
-                title="打开新终端窗口，设置好环境变量并运行 Claude Code"
+                title={t('claude.launchTooltip')}
               >
-                {claudeLaunching ? '启动中...' : '🚀 启动 Claude Code'}
+                {claudeLaunching ? t('claude.launching') : t('claude.launch')}
               </button>
               <button
                 type="button"
@@ -286,21 +291,21 @@ export function MainView({
                     if (envWritten) {
                       await clearClaudeEnv()
                       setEnvWritten(false)
-                      showToast('已从 Claude Code 配置中清除代理设置')
+                      showToast(t('claude.clearDone'))
                     } else {
                       await writeClaudeEnv(config.port, config.defaultModel, config.defaultSmallModel)
                       setEnvWritten(true)
-                      showToast('已写入 ~/.claude/settings.json，直接运行 claude 即可')
+                      showToast(t('claude.writeDone'))
                     }
                   } catch (err) {
-                    showToast('操作失败: ' + String(err))
+                    showToast(t('claude.opFailed') + String(err))
                   } finally {
                     setEnvBusy(false)
                   }
                 }}
-                title={envWritten ? '从 ~/.claude/settings.json 中清除代理配置' : '将代理配置写入 Claude Code 的 ~/.claude/settings.json，之后直接运行 claude 即走代理'}
+                title={envWritten ? t('claude.clearTooltip') : t('claude.writeTooltip')}
               >
-                {envBusy ? '处理中...' : envWritten ? '❌ 清除 CC 配置' : '📋 写入 CC 配置'}
+                {envBusy ? t('processing') : envWritten ? t('claude.clearConfig') : t('claude.writeConfig')}
               </button>
             </div>
           )}
@@ -313,7 +318,7 @@ export function MainView({
           onToggle={e => setUsageOpen(e.target.open)}
         >
           <summary>
-            <span>📊 用量</span>
+            <span>{t('usage.title')}</span>
             {premium && (
               <span className="usage-mini">
                 {premium.entitlement - premium.remaining}/{premium.entitlement}
@@ -325,17 +330,17 @@ export function MainView({
           <div className="collapse-body">
             <div className="row usage-toolbar" style={{ marginBottom: 4 }}>
               <button type="button" onClick={refreshUsage} disabled={usageLoading || !isRunning}>
-                {usageLoading ? '刷新中...' : '刷新'}
+                {usageLoading ? t('refreshing') : t('refresh')}
               </button>
-              {!isRunning && <span className="hint">需先启动服务</span>}
+              {!isRunning && <span className="hint">{t('usage.needService')}</span>}
               {usage && (() => {
                 const resetDate = usage.quota_reset_date
-                  ? new Date(usage.quota_reset_date).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })
+                  ? new Date(usage.quota_reset_date).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: 'long', day: 'numeric' })
                   : null
                 return (usage.copilot_plan || resetDate) ? (
                   <span className="usage-meta-inline">
-                    {usage.copilot_plan && <span>计划: {usage.copilot_plan}</span>}
-                    {resetDate && <span>重置: {resetDate}</span>}
+                    {usage.copilot_plan && <span>{t('usage.plan')}: {usage.copilot_plan}</span>}
+                    {resetDate && <span>{t('usage.reset')}: {resetDate}</span>}
                   </span>
                 ) : null
               })()}
@@ -361,8 +366,8 @@ export function MainView({
                       </div>
                     )}
                     <div className="usage-card-footer">
-                      <span>{q.unlimited ? '无限制' : `剩余 ${q.remaining}`}</span>
-                      {q.overage_permitted && q.overage_count > 0 && <span style={{color:'var(--yellow)'}}>超额 {q.overage_count}</span>}
+                      <span>{q.unlimited ? t('usage.unlimited') : `${t('usage.remaining')} ${q.remaining}`}</span>
+                      {q.overage_permitted && q.overage_count > 0 && <span style={{color:'var(--yellow)'}}>{t('usage.overage')} {q.overage_count}</span>}
                     </div>
                   </div>
                 )
@@ -370,9 +375,9 @@ export function MainView({
 
               return (
                 <div className="usage-grid">
-                  {renderQuota('高级请求', snap.premium_interactions)}
-                  {renderQuota('聊天', snap.chat)}
-                  {renderQuota('补全', snap.completions)}
+                  {renderQuota(t('usage.premium'), snap.premium_interactions)}
+                  {renderQuota(t('usage.chat'), snap.chat)}
+                  {renderQuota(t('usage.completions'), snap.completions)}
                 </div>
               )
             })()}
@@ -385,24 +390,24 @@ export function MainView({
       {logsOpen && (
         <aside className="log-sidebar">
           <div className="log-sidebar-header">
-            <span className="log-sidebar-title">Verbose 日志</span>
+            <span className="log-sidebar-title">{t('logs.title')}</span>
             <div className="log-toolbar">
               <button
                 type="button"
                 className={`icon-btn icon-btn-sm${logFollow ? ' active' : ''}`}
                 onClick={() => setLogFollow(v => !v)}
-                title={logFollow ? '已跟随，点击停止' : '未跟随，点击开启'}
+                title={logFollow ? t('logs.following') : t('logs.notFollowing')}
               >
                 {logFollow ? '↓' : '∥'}
               </button>
-              <button type="button" className="icon-btn icon-btn-sm" onClick={() => setLogFontSize(s => Math.max(8, s - 1))} title="缩小字体">A−</button>
-              <button type="button" className="icon-btn icon-btn-sm" onClick={() => setLogFontSize(s => Math.min(20, s + 1))} title="放大字体">A+</button>
-              <button type="button" className="icon-btn" onClick={() => setLogsOpen(false)} title="关闭">✕</button>
+              <button type="button" className="icon-btn icon-btn-sm" onClick={() => setLogFontSize(s => Math.max(8, s - 1))} title={t('logs.fontSmaller')}>A−</button>
+              <button type="button" className="icon-btn icon-btn-sm" onClick={() => setLogFontSize(s => Math.min(20, s + 1))} title={t('logs.fontLarger')}>A+</button>
+              <button type="button" className="icon-btn" onClick={() => setLogsOpen(false)} title={t('close')}>✕</button>
             </div>
           </div>
           <div className="log-sidebar-body">
             {logs.length === 0 && (
-              <p className="hint">{isRunning ? '等待日志...' : '服务未运行'}</p>
+              <p className="hint">{isRunning ? t('logs.waiting') : t('logs.notRunning')}</p>
             )}
             {logs.length > 0 && (
               <pre className="log-pre log-fill" style={{ fontSize: `${logFontSize}px` }}>
