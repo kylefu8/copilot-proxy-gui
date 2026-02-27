@@ -1,0 +1,160 @@
+name: Release GUI
+
+permissions:
+  contents: write
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag name (e.g. v0.1.0)'
+        required: false
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate icons
+        run: node scripts/generate-icons.cjs
+
+      - name: Build frontend
+        run: npx vite build
+
+      - name: Build proxy server
+        run: |
+          mkdir -p build
+          bun build --compile --target=bun-windows-x64 copilot-proxy/src/main.ts --outfile build/copilot-proxy-server.exe
+
+      - name: Package with electron-builder
+        run: npx electron-builder --win --config electron-builder.yml
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: |
+            release/*.exe
+            release/*.yml
+          retention-days: 30
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate icons
+        run: node scripts/generate-icons.cjs
+
+      - name: Build frontend
+        run: npx vite build
+
+      - name: Build proxy server
+        run: |
+          mkdir -p build
+          bun build --compile --target=bun-linux-x64 copilot-proxy/src/main.ts --outfile build/copilot-proxy-server
+
+      - name: Package with electron-builder
+        run: npx electron-builder --linux --config electron-builder.yml
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-release
+          path: |
+            release/*.AppImage
+            release/*.tar.gz
+          retention-days: 30
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate icons
+        run: node scripts/generate-icons.cjs
+
+      - name: Build frontend
+        run: npx vite build
+
+      - name: Build proxy server
+        run: |
+          mkdir -p build
+          bun build --compile copilot-proxy/src/main.ts --outfile build/copilot-proxy-server
+
+      - name: Package with electron-builder
+        run: npx electron-builder --mac --config electron-builder.yml
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-release
+          path: |
+            release/*.dmg
+          retention-days: 30
+
+  publish-release:
+    needs: [build-windows, build-linux, build-macos]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: List artifacts
+        run: find release-artifacts -type f | head -20
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-artifacts/**/*
+          draft: true
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,3 @@
+[submodule "copilot-proxy"]
+	path = copilot-proxy
+	url = https://github.com/Jer-y/copilot-proxy.git

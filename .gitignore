@@ -1,0 +1,17 @@
+# dependencies
+node_modules/
+
+# electron-builder output
+release/
+
+# build artifacts (proxy exe, generated icons, etc.)
+build/copilot-proxy-server.exe
+build/copilot-proxy-server
+build/icon.ico
+build/icon.png
+
+# vite build output
+dist/
+
+# lock files (use npm — keep package-lock.json)
+bun.lock

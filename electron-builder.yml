@@ -1,0 +1,46 @@
+appId: com.kylefu8.copilot-proxy-gui
+productName: Copilot Proxy GUI
+copyright: Copyright © 2024-2026
+
+directories:
+  buildResources: build
+  output: release
+
+# Files included in the asar archive
+files:
+  - electron/**/*
+  - dist/**/*
+  - "!node_modules"
+
+# Proxy exe bundled outside the asar
+extraResources:
+  - from: build/copilot-proxy-server.exe
+    to: copilot-proxy-server.exe
+
+win:
+  target:
+    - target: portable
+      arch: [x64]
+  icon: build/icon.ico
+
+mac:
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+  icon: build/icon.png
+  category: public.app-category.developer-tools
+
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: tar.gz
+      arch: [x64]
+  icon: build/icon.png
+  category: Development
+
+portable:
+  artifactName: "${productName}-${version}-portable.exe"
+
+# Don't publish anywhere (we upload to GitHub Releases manually or via CI)
+publish: null
