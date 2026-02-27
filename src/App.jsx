@@ -33,11 +33,12 @@ function AppInner() {
 
   const [models, setModels] = useState(null)
   const [modelsLoading, setModelsLoading] = useState(false)
-  const [modelsError, setModelsError] = useState('')
+  const [modelsError, setModelsError] = useState(null)
   const [showRiskDialog, setShowRiskDialog] = useState(false)
   const [showCloseDialog, setShowCloseDialog] = useState(false)
   const pendingStartRef = useRef(false)
   const triggerStartRef = useRef(() => {})
+  const configRef = useRef(config)
 
   // Toast notification
   const [toast, setToast] = useState('')
@@ -55,12 +56,21 @@ function AppInner() {
     applyTheme(config.theme || 'frost')
   }, [config.theme])
 
+  // Keep configRef in sync so event listeners always see latest config
+  useEffect(() => { configRef.current = config }, [config])
+
   // Listen for close-requested from main process (tray close confirmation)
   useEffect(() => {
     const cleanups = []
 
     if (window.copilotProxyDesktop?.onCloseRequested) {
       const unsub = window.copilotProxyDesktop.onCloseRequested(() => {
+        // If user previously saved a close action, apply it immediately
+        const saved = configRef.current.closeAction
+        if (saved === 'minimize' || saved === 'quit') {
+          window.copilotProxyDesktop.invoke('close_confirm_response', { action: saved })
+          return
+        }
         setShowCloseDialog(true)
       })
       if (unsub) cleanups.push(unsub)
@@ -85,12 +95,17 @@ function AppInner() {
     return () => cleanups.forEach(fn => fn())
   }, [])
 
-  const handleCloseResponse = useCallback((action) => {
+  const handleCloseResponse = useCallback((action, remember = false) => {
     setShowCloseDialog(false)
+    if (remember && (action === 'minimize' || action === 'quit')) {
+      const updated = { ...config, closeAction: action }
+      setConfig(updated)
+      saveConfig(updated)
+    }
     if (window.copilotProxyDesktop?.invoke) {
       window.copilotProxyDesktop.invoke('close_confirm_response', { action })
     }
-  }, [])
+  }, [config])
 
   // Auto-fetch models on mount if logged in
   useEffect(() => {
@@ -141,11 +156,14 @@ function AppInner() {
     }
   }, [config.theme])
 
-  const checkAuth = useCallback(async () => {
+  const checkAuth = useCallback(async (clearExpired = false) => {
     setAuthLoading(true)
     try {
       const result = await getAuthStatus()
-      setAuthStatus(result)
+      setAuthStatus(prev => ({
+        ...result,
+        tokenExpired: clearExpired ? false : (prev?.tokenExpired && result.hasToken) || false,
+      }))
     }
     catch (error) {
       setAuthStatus({ hasToken: false, message: String(error) })
@@ -157,14 +175,23 @@ function AppInner() {
 
   const refreshModels = useCallback(async () => {
     setModelsLoading(true)
-    setModelsError('')
+    setModelsError(null)
     try {
       const data = await fetchModelsFromCopilot(config.accountType)
       setModels(data)
+      // Token is valid — clear any previous expired flag
+      setAuthStatus(prev => prev?.tokenExpired ? { ...prev, tokenExpired: false } : prev)
     }
     catch (error) {
       setModels(null)
-      setModelsError(String(error))
+      const msg = error.message || String(error)
+      // 401 = token expired, suggest re-login
+      if (msg.includes('401')) {
+        setModelsError({ key: 'tokenExpired' })
+        setAuthStatus(prev => ({ ...prev, tokenExpired: true }))
+      } else {
+        setModelsError({ key: 'fetchError', detail: msg })
+      }
     }
     finally {
       setModelsLoading(false)
@@ -267,8 +294,8 @@ function AppInner() {
       />
       {showCloseDialog && (
         <CloseDialog
-          onMinimize={() => handleCloseResponse('minimize')}
-          onQuit={() => handleCloseResponse('quit')}
+          onMinimize={(remember) => handleCloseResponse('minimize', remember)}
+          onQuit={(remember) => handleCloseResponse('quit', remember)}
           onCancel={() => handleCloseResponse('cancel')}
         />
       )}
@@ -294,15 +321,18 @@ function AppInner() {
           // Clear stale errors and refresh auth (user may have just logged in)
           setService(prev => prev.lastError ? { ...prev, status: 'idle', lastError: null } : prev)
           getAuthStatus().then(auth => {
-            setAuthStatus(auth)
+            setAuthStatus(prev => ({
+              ...auth,
+              tokenExpired: prev?.tokenExpired && auth.hasToken ? true : false,
+            }))
             if (auth.hasToken && !models) refreshModels()
           }).catch(e => console.warn('Auth refresh failed:', e))
         }}
       />
       {showCloseDialog && (
         <CloseDialog
-          onMinimize={() => handleCloseResponse('minimize')}
-          onQuit={() => handleCloseResponse('quit')}
+          onMinimize={(remember) => handleCloseResponse('minimize', remember)}
+          onQuit={(remember) => handleCloseResponse('quit', remember)}
           onCancel={() => handleCloseResponse('cancel')}
         />
       )}
@@ -342,8 +372,8 @@ function AppInner() {
     )}
     {showCloseDialog && (
       <CloseDialog
-        onMinimize={() => handleCloseResponse('minimize')}
-        onQuit={() => handleCloseResponse('quit')}
+        onMinimize={(remember) => handleCloseResponse('minimize', remember)}
+        onQuit={(remember) => handleCloseResponse('quit', remember)}
         onCancel={() => handleCloseResponse('cancel')}
       />
     )}

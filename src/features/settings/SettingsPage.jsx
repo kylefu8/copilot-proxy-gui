@@ -66,7 +66,7 @@ export function SettingsPage({
       const result = await onStartDeviceCode({ theme: config.theme })
 
       if (result.status === 'success') {
-        onCheckAuth()
+        onCheckAuth(true)
         autoDetect()
       } else if (result.status === 'canceled') {
         setLoginMessage('')
@@ -101,7 +101,7 @@ export function SettingsPage({
         <h2>{t('settings.githubLogin')}</h2>
 
         <div className="row gap-8" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
-          {authStatus?.hasToken ? (
+          {authStatus?.hasToken && !authStatus?.tokenExpired ? (
             <>
               <span className="success" style={{ margin: 0 }}>{t('settings.loggedIn')}</span>
               {authStatus.tokenPath && (
@@ -110,12 +110,15 @@ export function SettingsPage({
             </>
           ) : (
             <>
+              {authStatus?.tokenExpired && (
+                <span className="error" style={{ margin: 0 }}>{t('settings.tokenExpired')}</span>
+              )}
               <button type="button" onClick={startLogin} disabled={loginBusy}>
                 {loginBusy ? t('settings.loginBusy') : t('settings.loginBtn')}
               </button>
               {loginMessage && <span className="success" style={{ margin: 0 }}>{loginMessage}</span>}
               {loginError && <span className="error" style={{ margin: 0 }}>❌ {loginError}</span>}
-              {authStatus && !loginMessage && !loginError && (
+              {authStatus && !authStatus?.tokenExpired && !loginMessage && !loginError && (
                 <span style={{ margin: 0 }}>{t('settings.notLoggedIn')}</span>
               )}
             </>
@@ -218,6 +221,15 @@ export function SettingsPage({
               onChange={e => onChangeConfig('autoStart', e.target.checked)}
             />
             {t('settings.autoStart')}
+          </label>
+
+          <label className="model-select-row" title={t('settings.closeActionTooltip')}>
+            {t('settings.closeAction')}
+            <select className="port-input" value={config.closeAction || ''} onChange={e => onChangeConfig('closeAction', e.target.value)}>
+              <option value="">{t('settings.closeAction.ask')}</option>
+              <option value="minimize">{t('settings.closeAction.minimize')}</option>
+              <option value="quit">{t('settings.closeAction.quit')}</option>
+            </select>
           </label>
         </div>
       </section>

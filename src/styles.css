@@ -257,13 +257,19 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .icon-btn:hover { border-color: var(--accent-border); color: var(--text); }
 
-/* Language toggle */
+/* Language toggle – match icon-btn box size */
 .lang-toggle {
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   font-weight: 700;
   letter-spacing: 0.03em;
-  min-width: 30px;
-  text-align: center;
+  min-width: 0;
+  width: 34px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 /* Control bar */
@@ -294,9 +300,8 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .model-select-row {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-direction: row;
+  flex-direction: column;
+  gap: 2px;
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -850,6 +855,21 @@ pre {
 }
 .close-btn-cancel:hover {
   background: var(--card);
+}
+.close-remember {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  user-select: none;
+  margin: 2px 0;
+}
+.close-remember input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 
 /* ─── About Page ─────────────────────────────────────────────── */

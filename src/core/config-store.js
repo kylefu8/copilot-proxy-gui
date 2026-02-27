@@ -14,6 +14,7 @@ export const defaultConfig = {
   defaultSmallModel: '',
   theme: 'frost',
   lang: 'zh',
+  closeAction: '',            // '' = ask, 'minimize', 'quit'
   riskAcceptedAt: null,       // ISO timestamp when user accepted risk
   riskConfigFingerprint: '',  // fingerprint of config at acceptance time
 }

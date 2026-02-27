@@ -48,13 +48,15 @@ const translations = {
 
     // ── Model Selection ───────────────────────────
     'model.default': '默认模型',
-    'model.small': '小模型',
+    'model.small': '快速模型',
     'model.saved': '模型选择已保存',
     'model.select': '请选择',
     'model.optional': '可选',
     'model.loginFirst': '请先到设置中登录 GitHub',
     'model.loadingList': '正在加载模型列表...',
     'model.selectFirst': '请先选择默认模型再启动',
+    'model.tokenExpired': 'Token 已过期，请到设置中重新登录 GitHub',
+    'model.fetchError': '获取模型失败: ',
     'model.defaultTooltip': '主力模型，用于处理复杂任务和长文本推理，如 Claude Sonnet / GPT-4o 等',
     'model.smallTooltip': '轻量快速模型，用于简单补全、摘要等低延迟场景，如 GPT-4o-mini / Claude Haiku 等（可选）',
 
@@ -74,7 +76,7 @@ const translations = {
 
     // ── Usage ─────────────────────────────────────
     'usage.title': '📊 用量',
-    'usage.needService': '需先启动服务',
+    'usage.needService': '需先启动代理',
     'usage.plan': '计划',
     'usage.reset': '重置',
     'usage.unlimited': '无限制',
@@ -98,6 +100,7 @@ const translations = {
     'settings.githubLogin': 'GitHub 登录',
     'settings.loggedIn': '✅ 已登录',
     'settings.notLoggedIn': '⚠️ 未登录',
+    'settings.tokenExpired': '⚠️ Token 已过期，请重新登录',
     'settings.loginBusy': '登录中...',
     'settings.loginBtn': '开始登录',
     'settings.checking': '检查中...',
@@ -127,6 +130,11 @@ const translations = {
     'settings.showTokenTooltip': '开启后，启动日志中会打印 Copilot Token 的完整内容，仅用于调试目的。',
     'settings.autoStart': '启动时自动运行服务',
     'settings.autoStartTooltip': '开启后，应用启动时会自动运行代理服务，无需手动点击启动按钮。',
+    'settings.closeAction': '关闭窗口时',
+    'settings.closeActionTooltip': '设置点击关闭按钮时的默认行为。选择"每次询问"可在关闭时弹出选择对话框。',
+    'settings.closeAction.ask': '每次询问',
+    'settings.closeAction.minimize': '最小化到托盘',
+    'settings.closeAction.quit': '退出应用',
     'settings.resetBtn': '恢复默认设置',
     'settings.saveBtn': '保存所有配置',
 
@@ -154,6 +162,7 @@ const translations = {
     'close.message': '请选择操作',
     'close.minimize': '最小化到托盘',
     'close.quit': '退出程序',
+    'close.remember': '记住我的选择',
   },
 
   en: {
@@ -203,13 +212,15 @@ const translations = {
 
     // ── Model Selection ───────────────────────────
     'model.default': 'Default Model',
-    'model.small': 'Small Model',
+    'model.small': 'Fast Model',
     'model.saved': 'Model selection saved',
     'model.select': 'Select...',
     'model.optional': 'Optional',
     'model.loginFirst': 'Please log in to GitHub in Settings first',
     'model.loadingList': 'Loading model list...',
     'model.selectFirst': 'Please select a default model before starting',
+    'model.tokenExpired': 'Token expired. Please re-login in Settings.',
+    'model.fetchError': 'Failed to fetch models: ',
     'model.defaultTooltip': 'Primary model for complex tasks and long-text reasoning, e.g. Claude Sonnet / GPT-4o',
     'model.smallTooltip': 'Lightweight fast model for simple completions, summaries etc. e.g. GPT-4o-mini / Claude Haiku (optional)',
 
@@ -229,7 +240,7 @@ const translations = {
 
     // ── Usage ─────────────────────────────────────
     'usage.title': '📊 Usage',
-    'usage.needService': 'Start service first',
+    'usage.needService': 'Start proxy first',
     'usage.plan': 'Plan',
     'usage.reset': 'Reset',
     'usage.unlimited': 'Unlimited',
@@ -253,6 +264,7 @@ const translations = {
     'settings.githubLogin': 'GitHub Login',
     'settings.loggedIn': '✅ Logged in',
     'settings.notLoggedIn': '⚠️ Not logged in',
+    'settings.tokenExpired': '⚠️ Token expired. Please re-login.',
     'settings.loginBusy': 'Logging in...',
     'settings.loginBtn': 'Log In',
     'settings.checking': 'Checking...',
@@ -282,6 +294,11 @@ const translations = {
     'settings.showTokenTooltip': 'When enabled, prints the full Copilot Token in startup logs. For debugging only.',
     'settings.autoStart': 'Auto-start Service',
     'settings.autoStartTooltip': 'When enabled, automatically starts the proxy service when the app launches.',
+    'settings.closeAction': 'On Close',
+    'settings.closeActionTooltip': 'Default action when the window close button is clicked. Choose "Ask every time" to show a confirmation dialog.',
+    'settings.closeAction.ask': 'Ask every time',
+    'settings.closeAction.minimize': 'Minimize to tray',
+    'settings.closeAction.quit': 'Quit app',
     'settings.resetBtn': 'Reset to Defaults',
     'settings.saveBtn': 'Save All Settings',
 
@@ -309,6 +326,7 @@ const translations = {
     'close.message': 'Choose an action',
     'close.minimize': 'Minimize to Tray',
     'close.quit': 'Quit',
+    'close.remember': 'Remember my choice',
   },
 }
 

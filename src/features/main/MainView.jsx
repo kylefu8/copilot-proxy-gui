@@ -254,10 +254,10 @@ export function MainView({
               </select>
             </label>
           </div>
-          {!hasAuth && !modelsLoading && <p className="hint">{t('model.loginFirst')}</p>}
+          {!hasAuth && !modelsLoading && !modelsError && <p className="hint">{t('model.loginFirst')}</p>}
           {hasAuth && !hasModels && !modelsLoading && !modelsError && <p className="hint">{t('model.loadingList')}</p>}
           {hasAuth && hasModels && !config.defaultModel && !isRunning && <p className="hint">{t('model.selectFirst')}</p>}
-          {modelsError && <p className="error">{modelsError}</p>}
+          {modelsError && <p className="error">{modelsError.key === 'tokenExpired' ? t('model.tokenExpired') : t('model.fetchError') + (modelsError.detail || '')}</p>}
           {isRunning && config.defaultModel && (
             <div className="row gap-8" style={{ marginTop: 4 }}>
               <button

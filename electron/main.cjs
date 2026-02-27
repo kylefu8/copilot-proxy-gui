@@ -105,8 +105,8 @@ const mainI18n = {
     'tray.model': '模型',
     'tray.statusRunning': '● 运行中',
     'tray.statusStopped': '○ 已停止',
-    'tray.stop': '■ 停止服务',
-    'tray.start': '▶ 启动服务',
+    'tray.stop': '■ 停止代理',
+    'tray.start': '▶ 启动代理',
     'tray.show': '显示窗口',
     'tray.quit': '退出',
     'err.loginFirst': '请先登录 GitHub',
@@ -131,6 +131,8 @@ const mainI18n = {
     'auth.canceled': '用户关闭了登录窗口',
     'auth.success': '✅ 登录成功！',
     'auth.retrying': '重试中',
+    'app.alreadyRunning': '程序已在运行中',
+    'app.alreadyRunningDetail': '另一个 Copilot Proxy GUI 实例已在运行，将切换到该窗口。',
   },
   en: {
     'tray.stopped': 'Stopped',
@@ -138,8 +140,8 @@ const mainI18n = {
     'tray.model': 'Model',
     'tray.statusRunning': '● Running',
     'tray.statusStopped': '○ Stopped',
-    'tray.stop': '■ Stop Service',
-    'tray.start': '▶ Start Service',
+    'tray.stop': '■ Stop Proxy',
+    'tray.start': '▶ Start Proxy',
     'tray.show': 'Show Window',
     'tray.quit': 'Quit',
     'err.loginFirst': 'Please log in to GitHub first',
@@ -164,6 +166,8 @@ const mainI18n = {
     'auth.canceled': 'User closed the login window',
     'auth.success': '✅ Login successful!',
     'auth.retrying': 'retrying',
+    'app.alreadyRunning': 'Application Already Running',
+    'app.alreadyRunningDetail': 'Another instance of Copilot Proxy GUI is already running. Switching to that window.',
   },
 }
 function mt(key) { return mainI18n[currentLang]?.[key] ?? mainI18n.zh[key] ?? key }
@@ -1125,9 +1129,30 @@ ipcMain.handle('copilot-proxy:invoke', async (_event, request) => {
   }
 })
 
+// ─── Single instance lock ────────────────────────────────────────────
+const gotLock = app.requestSingleInstanceLock()
+if (!gotLock) {
+  app.whenReady().then(() => {
+    dialog.showMessageBoxSync({
+      type: 'info',
+      title: mt('app.alreadyRunning'),
+      message: mt('app.alreadyRunningDetail'),
+    })
+    app.quit()
+  })
+} else {
+  app.on('second-instance', () => {
+    if (mainWin) {
+      if (mainWin.isMinimized()) mainWin.restore()
+      mainWin.show()
+      mainWin.focus()
+    }
+  })
+}
+
 // ─── App lifecycle ──────────────────────────────────────────────────
 
-app.whenReady().then(() => {
+if (gotLock) app.whenReady().then(() => {
   createTray()
   createWindow()
 
