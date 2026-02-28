@@ -36,9 +36,13 @@ afterPack: scripts/afterPack.cjs
 
 dmg:
   artifactName: "${productName}-${version}-${arch}.dmg"
+  writeUpdateInfo: false
 
 portable:
   artifactName: "${productName}-${version}-portable.exe"
 
 # Don't publish anywhere (we upload to GitHub Releases manually or via CI)
 publish: null
+
+# Disable blockmap generation to prevent DMG corruption
+generateUpdatesFilesForAllChannels: false

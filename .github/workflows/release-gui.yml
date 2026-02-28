@@ -14,7 +14,21 @@ on:
         required: false
 
 jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build-windows:
+    needs: create-release
+    if: always() && (needs.create-release.result == 'success' || !startsWith(github.ref, 'refs/tags/'))
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -50,16 +64,25 @@ jobs:
       - name: Package with electron-builder
         run: npx electron-builder --win --config electron-builder.yml
 
-      - name: Upload artifacts
+      - name: Upload to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts (for non-tag builds)
+        if: "!startsWith(github.ref, 'refs/tags/')"
         uses: actions/upload-artifact@v4
         with:
           name: windows-release
-          path: |
-            release/*.exe
-          compression-level: 0
+          path: release/*.exe
           retention-days: 30
 
   build-macos:
+    needs: create-release
+    if: always() && (needs.create-release.result == 'success' || !startsWith(github.ref, 'refs/tags/'))
     runs-on: macos-latest
     strategy:
       matrix:
@@ -104,34 +127,27 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
-      - name: Upload artifacts
+      - name: Verify DMG integrity
+        run: |
+          for f in release/*.dmg; do
+            echo "Verifying: $f"
+            ls -lh "$f"
+            shasum -a 256 "$f"
+            hdiutil verify "$f"
+          done
+
+      - name: Upload to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts (for non-tag builds)
+        if: "!startsWith(github.ref, 'refs/tags/')"
         uses: actions/upload-artifact@v4
         with:
           name: macos-release-${{ matrix.arch }}
-          path: |
-            release/*.dmg
-          compression-level: 0
+          path: release/*.dmg
           retention-days: 30
-
-  publish-release:
-    needs: [build-windows, build-macos]
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: release-artifacts
-          merge-multiple: true
-
-      - name: List artifacts
-        run: find release-artifacts -type f | head -20
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: release-artifacts/**/*
-          draft: true
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
