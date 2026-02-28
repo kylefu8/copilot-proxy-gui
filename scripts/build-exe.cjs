@@ -39,6 +39,7 @@ const bunTarget = isWin
   : `bun-darwin-${process.arch === 'arm64' ? 'arm64' : 'x64'}`
 
 const proxyBinaryName = isWin ? 'copilot-proxy-server.exe' : 'copilot-proxy-server'
+const proxyOutPath = path.join(buildDir, proxyBinaryName)
 const electronBuilderFlag = isWin ? '--win' : '--mac'
 
 // Locate the proxy server source:
@@ -83,29 +84,52 @@ console.log('\n═══ Step 1: Building frontend (vite) ═══')
 run('npx vite build', { cwd: guiDir })
 
 // ── 2. Compile proxy server as standalone exe ───────────────────────
-
-console.log('\n═══ Step 2: Compiling proxy server (bun build --compile) ═══')
-console.log(`  Platform: ${process.platform}, Arch: ${process.arch}, Target: ${bunTarget}`)
-
-const proxyOutPath = path.join(buildDir, proxyBinaryName)
-
-run(
-  `bun build --compile --target=${bunTarget} src/main.ts --outfile "${proxyOutPath}"`,
-  { cwd: repoRoot },
-)
-
-if (!fs.existsSync(proxyOutPath)) {
-  console.error('ERROR: Proxy binary was not created!')
-  process.exit(1)
-}
-
-const sizeMB = (fs.statSync(proxyOutPath).size / 1024 / 1024).toFixed(1)
-console.log(`  → ${proxyOutPath} (${sizeMB} MB)`)
-
 // ── 3. Package with electron-builder ────────────────────────────────
 
-console.log('\n═══ Step 3: Packaging with electron-builder ═══')
+if (isMac) {
+  // macOS: build separately for each architecture to ensure correct proxy binary
+  const archs = ['arm64', 'x64']
+  for (const arch of archs) {
+    const target = `bun-darwin-${arch}`
+    console.log(`\n═══ Step 2+3 [${arch}]: Compile proxy & package ═══`)
+    console.log(`  Target: ${target}`)
 
-run(`npx electron-builder ${electronBuilderFlag} --config electron-builder.yml`, { cwd: guiDir })
+    run(
+      `bun build --compile --target=${target} src/main.ts --outfile "${proxyOutPath}"`,
+      { cwd: repoRoot },
+    )
+
+    if (!fs.existsSync(proxyOutPath)) {
+      console.error(`ERROR: Proxy binary was not created for ${arch}!`)
+      process.exit(1)
+    }
+
+    const sizeMB = (fs.statSync(proxyOutPath).size / 1024 / 1024).toFixed(1)
+    console.log(`  → ${proxyOutPath} (${sizeMB} MB)`)
+
+    console.log(`\n  Packaging ${arch} DMG...`)
+    run(`npx electron-builder --mac --${arch} --config electron-builder.yml`, { cwd: guiDir })
+  }
+} else {
+  // Windows: single architecture build
+  console.log('\n═══ Step 2: Compiling proxy server (bun build --compile) ═══')
+  console.log(`  Platform: ${process.platform}, Arch: ${process.arch}, Target: ${bunTarget}`)
+
+  run(
+    `bun build --compile --target=${bunTarget} src/main.ts --outfile "${proxyOutPath}"`,
+    { cwd: repoRoot },
+  )
+
+  if (!fs.existsSync(proxyOutPath)) {
+    console.error('ERROR: Proxy binary was not created!')
+    process.exit(1)
+  }
+
+  const sizeMB = (fs.statSync(proxyOutPath).size / 1024 / 1024).toFixed(1)
+  console.log(`  → ${proxyOutPath} (${sizeMB} MB)`)
+
+  console.log('\n═══ Step 3: Packaging with electron-builder ═══')
+  run(`npx electron-builder ${electronBuilderFlag} --config electron-builder.yml`, { cwd: guiDir })
+}
 
 console.log('\n═══ Build complete! Check release/ ═══')
