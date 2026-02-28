@@ -223,4 +223,38 @@ function createTrayIcon(statusColor) {
   return nativeImage.createFromBuffer(toPNG(canvas))
 }
 
-module.exports = { createAppIcon, createTrayIcon }
+/**
+ * macOS menu-bar template icon (16x16, white-on-transparent).
+ * Electron treats images with "Template" suffix or .setTemplateImage(true)
+ * as template images that automatically adapt to light/dark menu bar.
+ */
+function createTrayIconTemplate() {
+  const size = 22
+  const canvas = createCanvas(size)
+
+  // All drawing in white — macOS will invert for dark/light menu bar automatically
+  const W = [0xff, 0xff, 0xff]
+
+  // ── Simplified goggles (two small rings) ──
+  // Left lens
+  fillCircle(canvas, 7, 8, 4, ...W, 220)
+  fillCircle(canvas, 7, 8, 2, 0, 0, 0, 0)  // transparent center (punch hole)
+
+  // Right lens
+  fillCircle(canvas, 15, 8, 4, ...W, 220)
+  fillCircle(canvas, 15, 8, 2, 0, 0, 0, 0)  // transparent center
+
+  // Bridge
+  drawLine(canvas, 10, 8, 12, 8, 1.5, ...W, 200)
+
+  // Small forward arrow below
+  drawLine(canvas, 5, 16, 12, 16, 1.2, ...W, 200)
+  drawLine(canvas, 10, 14, 13, 16, 1.2, ...W, 200)
+  drawLine(canvas, 10, 18, 13, 16, 1.2, ...W, 200)
+
+  const img = nativeImage.createFromBuffer(toPNG(canvas), { scaleFactor: 2 })
+  img.setTemplateImage(true)
+  return img
+}
+
+module.exports = { createAppIcon, createTrayIcon, createTrayIconTemplate }

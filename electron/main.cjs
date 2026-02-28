@@ -332,9 +332,12 @@ function deleteTokenFile() {
 function resolveBunExecutable() {
   const candidates = ['bun']
 
-  if (process.env.USERPROFILE) {
-    candidates.push(path.join(process.env.USERPROFILE, '.bun', 'bin', 'bun.exe'))
-    candidates.push(path.join(process.env.USERPROFILE, '.bun', 'bin', 'bun'))
+  const home = process.env.HOME || process.env.USERPROFILE
+  if (home) {
+    if (process.platform === 'win32') {
+      candidates.push(path.join(home, '.bun', 'bin', 'bun.exe'))
+    }
+    candidates.push(path.join(home, '.bun', 'bin', 'bun'))
   }
 
   for (const candidate of candidates) {
@@ -380,7 +383,8 @@ function serviceStart(payload) {
 
   if (isPackaged) {
     // Check for bundled standalone proxy exe first (full build)
-    const proxyExe = path.join(process.resourcesPath, 'copilot-proxy-server.exe')
+    const proxyName = process.platform === 'win32' ? 'copilot-proxy-server.exe' : 'copilot-proxy-server'
+    const proxyExe = path.join(process.resourcesPath, proxyName)
     if (fs.existsSync(proxyExe)) {
       serviceChild = spawn(
         proxyExe,
@@ -398,7 +402,7 @@ function serviceStart(payload) {
     // Dev mode: use bun to run source
     const bunInfo = resolveBunExecutable()
     if (!bunInfo) {
-      throw new Error('bun not found in PATH or %USERPROFILE%/.bun/bin')
+      throw new Error('bun not found in PATH or ~/.bun/bin')
     }
     serviceChild = spawn(
       bunInfo.bin,
@@ -495,19 +499,36 @@ async function launchClaudeCode(payload) {
     CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
   }
 
-  // Build PowerShell command: cd to workspace, set env vars, run claude
-  const cdCmd = `Set-Location '${cwd.replace(/'/g, "''")}'`
-  const setEnv = Object.entries(envVars)
-    .map(([k, v]) => `$env:${k}='${v}'`)
-    .join('; ')
-  const psCommand = `${cdCmd}; ${setEnv}; claude`
+  if (process.platform === 'win32') {
+    // Windows: open a visible PowerShell window
+    const cdCmd = `Set-Location '${cwd.replace(/'/g, "''")}'`
+    const setEnv = Object.entries(envVars)
+      .map(([k, v]) => `$env:${k}='${v}'`)
+      .join('; ')
+    const psCommand = `${cdCmd}; ${setEnv}; claude`
 
-  // Use cmd /c start to open a visible PowerShell window
-  spawn('cmd.exe', ['/c', 'start', 'powershell.exe', '-NoExit', '-Command', psCommand], {
-    detached: true,
-    stdio: 'ignore',
-    shell: false,
-  }).unref()
+    spawn('cmd.exe', ['/c', 'start', 'powershell.exe', '-NoExit', '-Command', psCommand], {
+      detached: true,
+      stdio: 'ignore',
+      shell: false,
+    }).unref()
+  } else if (process.platform === 'darwin') {
+    // macOS: open Terminal.app via osascript
+    const exportEnv = Object.entries(envVars)
+      .map(([k, v]) => `export ${k}='${v.replace(/'/g, "'\\''")}'`)
+      .join('; ')
+    const script = `cd '${cwd.replace(/'/g, "'\\''")}'  && ${exportEnv} && claude`
+    const osaScript = `tell application "Terminal"
+      activate
+      do script "${script.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"
+    end tell`
+
+    spawn('osascript', ['-e', osaScript], {
+      detached: true,
+      stdio: 'ignore',
+      shell: false,
+    }).unref()
+  }
 
   return { ok: true, cwd }
 }
@@ -902,7 +923,9 @@ async function authDeviceCodeFlow(payload) {
 const icons = require('./icons.cjs')
 
 function createTray() {
-  const icon = icons.createTrayIcon('#888888')
+  const icon = process.platform === 'darwin'
+    ? icons.createTrayIconTemplate()
+    : icons.createTrayIcon('#888888')
   tray = new Tray(icon)
   tray.setToolTip(`Copilot Proxy - ${mt('tray.stopped')}`)
   updateTrayMenu()
@@ -920,7 +943,10 @@ function updateTrayStatus() {
   const running = !!serviceChild
   const color = running ? '#22c55e' : '#888888'
   const statusText = running ? mt('tray.running') : mt('tray.stopped')
-  tray.setImage(icons.createTrayIcon(color))
+  // macOS uses template image (always monochrome); other platforms use colored icon
+  if (process.platform !== 'darwin') {
+    tray.setImage(icons.createTrayIcon(color))
+  }
 
   let tooltip = `Copilot Proxy - ${statusText}`
   if (running && lastModelName) {
@@ -1001,8 +1027,46 @@ function updateTrayMenu() {
 // ─── Electron Window ────────────────────────────────────────────────
 
 function createWindow() {
-  // Remove default menu bar
-  Menu.setApplicationMenu(null)
+  // On macOS: set a standard application menu so Cmd+C/V/X/A/Q work properly
+  // On Windows: remove the default menu bar for a clean look
+  if (process.platform === 'darwin') {
+    const template = [
+      {
+        label: app.name,
+        submenu: [
+          { role: 'about' },
+          { type: 'separator' },
+          { role: 'hide' },
+          { role: 'hideOthers' },
+          { role: 'unhide' },
+          { type: 'separator' },
+          { role: 'quit' },
+        ],
+      },
+      {
+        label: 'Edit',
+        submenu: [
+          { role: 'undo' },
+          { role: 'redo' },
+          { type: 'separator' },
+          { role: 'cut' },
+          { role: 'copy' },
+          { role: 'paste' },
+          { role: 'selectAll' },
+        ],
+      },
+      {
+        label: 'Window',
+        submenu: [
+          { role: 'minimize' },
+          { role: 'close' },
+        ],
+      },
+    ]
+    Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+  } else {
+    Menu.setApplicationMenu(null)
+  }
 
   mainWin = new BrowserWindow({
     width: 480,

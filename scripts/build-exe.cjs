@@ -4,12 +4,14 @@
  * Steps:
  *   0. Generate icon files              → build/icon.png, build/icon.ico
  *   1. Build the Vite frontend          → dist/
- *   2. Compile the proxy server via bun → build/copilot-proxy-server.exe
+ *   2. Compile the proxy server via bun → build/copilot-proxy-server[.exe]
  *   3. Package with electron-builder    → release/
  *
  * Prerequisites:
  *   - copilot-proxy/ submodule must be initialized
  *   - bun must be installed
+ *
+ * Supported platforms: Windows (win32), macOS (darwin)
  *
  * Usage:
  *   npm run desktop:build
@@ -21,6 +23,23 @@ const path = require('node:path')
 
 const guiDir = path.resolve(__dirname, '..')
 const buildDir = path.join(guiDir, 'build')
+
+// ── Platform detection ──────────────────────────────────────────────
+
+const isWin = process.platform === 'win32'
+const isMac = process.platform === 'darwin'
+
+if (!isWin && !isMac) {
+  console.error(`ERROR: Unsupported platform "${process.platform}". Only Windows and macOS are supported.`)
+  process.exit(1)
+}
+
+const bunTarget = isWin
+  ? 'bun-windows-x64'
+  : `bun-darwin-${process.arch === 'arm64' ? 'arm64' : 'x64'}`
+
+const proxyBinaryName = isWin ? 'copilot-proxy-server.exe' : 'copilot-proxy-server'
+const electronBuilderFlag = isWin ? '--win' : '--mac'
 
 // Locate the proxy server source:
 //   1. copilot-proxy/ submodule (standalone repo)
@@ -35,8 +54,8 @@ function findRepoRoot() {
 }
 const repoRoot = findRepoRoot()
 
-// Ensure COMSPEC is set (can be lost in some environments)
-if (!process.env.COMSPEC && process.platform === 'win32') {
+// Ensure COMSPEC is set on Windows (can be lost in some environments)
+if (!process.env.COMSPEC && isWin) {
   process.env.COMSPEC = path.join(process.env.SystemRoot || 'C:\\WINDOWS', 'system32', 'cmd.exe')
 }
 
@@ -66,16 +85,17 @@ run('npx vite build', { cwd: guiDir })
 // ── 2. Compile proxy server as standalone exe ───────────────────────
 
 console.log('\n═══ Step 2: Compiling proxy server (bun build --compile) ═══')
+console.log(`  Platform: ${process.platform}, Arch: ${process.arch}, Target: ${bunTarget}`)
 
-const proxyOutPath = path.join(buildDir, 'copilot-proxy-server.exe')
+const proxyOutPath = path.join(buildDir, proxyBinaryName)
 
 run(
-  `bun build --compile --target=bun-windows-x64 src/main.ts --outfile "${proxyOutPath}"`,
+  `bun build --compile --target=${bunTarget} src/main.ts --outfile "${proxyOutPath}"`,
   { cwd: repoRoot },
 )
 
 if (!fs.existsSync(proxyOutPath)) {
-  console.error('ERROR: Proxy exe was not created!')
+  console.error('ERROR: Proxy binary was not created!')
   process.exit(1)
 }
 
@@ -86,6 +106,6 @@ console.log(`  → ${proxyOutPath} (${sizeMB} MB)`)
 
 console.log('\n═══ Step 3: Packaging with electron-builder ═══')
 
-run('npx electron-builder --win --config electron-builder.yml', { cwd: guiDir })
+run(`npx electron-builder ${electronBuilderFlag} --config electron-builder.yml`, { cwd: guiDir })
 
 console.log('\n═══ Build complete! Check release/ ═══')

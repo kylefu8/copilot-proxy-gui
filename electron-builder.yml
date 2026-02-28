@@ -12,32 +12,24 @@ files:
   - dist/**/*
   - "!node_modules"
 
-# Proxy exe bundled outside the asar
-extraResources:
-  - from: build/copilot-proxy-server.exe
-    to: copilot-proxy-server.exe
-
 win:
   target:
     - target: portable
       arch: [x64]
   icon: build/icon.ico
+  extraResources:
+    - from: build/copilot-proxy-server.exe
+      to: copilot-proxy-server.exe
 
 mac:
   target:
     - target: dmg
-      arch: [x64, arm64]
   icon: build/icon.png
   category: public.app-category.developer-tools
-
-linux:
-  target:
-    - target: AppImage
-      arch: [x64]
-    - target: tar.gz
-      arch: [x64]
-  icon: build/icon.png
-  category: Development
+  identity: null
+  extraResources:
+    - from: build/copilot-proxy-server
+      to: copilot-proxy-server
 
 portable:
   artifactName: "${productName}-${version}-portable.exe"
