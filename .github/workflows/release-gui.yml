@@ -56,7 +56,7 @@ jobs:
           name: windows-release
           path: |
             release/*.exe
-            release/*.yml
+          compression-level: 0
           retention-days: 30
 
   build-macos:
@@ -110,7 +110,7 @@ jobs:
           name: macos-release-${{ matrix.arch }}
           path: |
             release/*.dmg
-            release/*.yml
+          compression-level: 0
           retention-days: 30
 
   publish-release:
