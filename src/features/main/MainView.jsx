@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { resizeWindow, launchClaudeCode, writeClaudeEnv, clearClaudeEnv, checkClaudeEnv } from '../../core/service-manager'
+import { resizeWindow, launchClaudeCode, writeClaudeEnv, clearClaudeEnv, checkClaudeEnv, checkClaudeInstalled } from '../../core/service-manager'
 import { themes, applyTheme } from '../../core/config-store'
 import { useI18n } from '../../core/i18n'
 
@@ -34,6 +34,7 @@ export function MainView({
   const [claudeLaunching, setClaudeLaunching] = useState(false)
   const [envWritten, setEnvWritten] = useState(false)
   const [envBusy, setEnvBusy] = useState(false)
+  const [claudeInstalled, setClaudeInstalled] = useState(null) // null = checking, true/false = result
   const [themeOpen, setThemeOpen] = useState(false)
   const [logFontSize, setLogFontSize] = useState(12)
   const [logFollow, setLogFollow] = useState(true)
@@ -48,9 +49,10 @@ export function MainView({
   const hasModels = modelOptions.length > 0
   const hasAuth = authStatus?.hasToken
 
-  // Check env var status on mount
+  // Check env var status and Claude Code installation on mount
   useEffect(() => {
     checkClaudeEnv().then(r => setEnvWritten(r.written)).catch(e => console.warn('Claude env check failed:', e))
+    checkClaudeInstalled().then(r => setClaudeInstalled(r.installed)).catch(() => setClaudeInstalled(false))
   }, [])
 
   // Close theme menu on outside click
@@ -65,21 +67,35 @@ export function MainView({
     return () => document.removeEventListener('mousedown', handleClick)
   }, [themeOpen])
 
-  // Dynamic window resizing: measure inner wrapper height + frame chrome
+  // Dynamic window resizing: observe content height changes via ResizeObserver
   useEffect(() => {
     const el = contentRef.current
-    if (!el) return
+    if (!el || !el.parentElement) return
 
     const width = logsOpen ? 900 : 480
 
-    // Use requestAnimationFrame to ensure DOM has rendered
-    const raf = requestAnimationFrame(() => {
-      const h = Math.max(el.offsetHeight, 200)
+    function updateHeight() {
+      const parent = el.parentElement
+      const style = parent ? getComputedStyle(parent) : null
+      const pad = style ? (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0) : 0
+      const h = Math.max(el.offsetHeight + pad, 200)
       resizeWindow(width, h).catch(e => console.warn('Window resize failed:', e))
-    })
+    }
 
-    return () => cancelAnimationFrame(raf)
-  }, [logsOpen, usageOpen, isRunning, claudeLaunching, usage, usageError])
+    // Initial measurement after render
+    const raf = requestAnimationFrame(updateHeight)
+
+    // Watch for any content size changes (new hints, model selector expansion, etc.)
+    const observer = new ResizeObserver(() => {
+      requestAnimationFrame(updateHeight)
+    })
+    observer.observe(el)
+
+    return () => {
+      cancelAnimationFrame(raf)
+      observer.disconnect()
+    }
+  }, [logsOpen])
 
   // Poll logs when expanded and service running
   useEffect(() => {
@@ -259,10 +275,14 @@ export function MainView({
           {hasAuth && hasModels && !config.defaultModel && !isRunning && <p className="hint">{t('model.selectFirst')}</p>}
           {modelsError && <p className="error">{modelsError.key === 'tokenExpired' ? t('model.tokenExpired') : t('model.fetchError') + (modelsError.detail || '')}</p>}
           {isRunning && config.defaultModel && (
+            <>
+            {claudeInstalled === false && (
+              <p className="hint" style={{ marginTop: 4 }}>{t('claude.notInstalled')}</p>
+            )}
             <div className="row gap-8" style={{ marginTop: 4 }}>
               <button
                 type="button"
-                disabled={claudeLaunching}
+                disabled={claudeLaunching || claudeInstalled === false}
                 onClick={async () => {
                   setClaudeLaunching(true)
                   try {
@@ -278,13 +298,13 @@ export function MainView({
                     setClaudeLaunching(false)
                   }
                 }}
-                title={t('claude.launchTooltip')}
+                title={claudeInstalled === false ? t('claude.notInstalled') : t('claude.launchTooltip')}
               >
                 {claudeLaunching ? t('claude.launching') : t('claude.launch')}
               </button>
               <button
                 type="button"
-                disabled={envBusy}
+                disabled={envBusy || claudeInstalled === false}
                 onClick={async () => {
                   setEnvBusy(true)
                   try {
@@ -303,11 +323,12 @@ export function MainView({
                     setEnvBusy(false)
                   }
                 }}
-                title={envWritten ? t('claude.clearTooltip') : t('claude.writeTooltip')}
+                title={claudeInstalled === false ? t('claude.notInstalled') : (envWritten ? t('claude.clearTooltip') : t('claude.writeTooltip'))}
               >
                 {envBusy ? t('processing') : envWritten ? t('claude.clearConfig') : t('claude.writeConfig')}
               </button>
             </div>
+            </>
           )}
         </section>
 

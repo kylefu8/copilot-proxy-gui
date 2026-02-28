@@ -73,6 +73,8 @@ const translations = {
     'claude.writeDone': '已写入 ~/.claude/settings.json，直接运行 claude 即可',
     'claude.clearDone': '已从 Claude Code 配置中清除代理设置',
     'claude.opFailed': '操作失败: ',
+    'claude.notInstalled': '⚠️ 未检测到 Claude Code，请先安装: npm install -g @anthropic-ai/claude-code',
+    'claude.installLink': '查看安装指南',
 
     // ── Usage ─────────────────────────────────────
     'usage.title': '📊 用量',
@@ -237,6 +239,8 @@ const translations = {
     'claude.writeDone': 'Written to ~/.claude/settings.json. Run claude directly to use proxy.',
     'claude.clearDone': 'Proxy settings cleared from Claude Code config',
     'claude.opFailed': 'Operation failed: ',
+    'claude.notInstalled': '⚠️ Claude Code not found. Please install first: npm install -g @anthropic-ai/claude-code',
+    'claude.installLink': 'Installation guide',
 
     // ── Usage ─────────────────────────────────────
     'usage.title': '📊 Usage',

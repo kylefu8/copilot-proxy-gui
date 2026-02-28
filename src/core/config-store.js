@@ -1,5 +1,15 @@
 const STORAGE_KEY = 'copilot-proxy-gui.config.v1'
 
+/** Detect system language: return 'zh' if Chinese, otherwise 'en' */
+function detectSystemLang() {
+  try {
+    const lang = (navigator.language || navigator.userLanguage || '').toLowerCase()
+    return lang.startsWith('zh') ? 'zh' : 'en'
+  } catch {
+    return 'zh'
+  }
+}
+
 export const defaultConfig = {
   port: 4399,
   accountType: 'individual',
@@ -13,7 +23,7 @@ export const defaultConfig = {
   defaultModel: '',
   defaultSmallModel: '',
   theme: 'frost',
-  lang: 'zh',
+  lang: 'zh',  // static default; overridden by detectSystemLang() on first launch
   closeAction: '',            // '' = ask, 'minimize', 'quit'
   riskAcceptedAt: null,       // ISO timestamp when user accepted risk
   riskConfigFingerprint: '',  // fingerprint of config at acceptance time
@@ -46,8 +56,10 @@ export function applyTheme(themeId) {
 export function loadConfig() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw)
-      return { ...defaultConfig }
+    if (!raw) {
+      // First launch: detect system language
+      return { ...defaultConfig, lang: detectSystemLang() }
+    }
 
     const parsed = JSON.parse(raw)
     return {
@@ -57,7 +69,7 @@ export function loadConfig() {
   }
   catch (e) {
     console.warn('Failed to load config from localStorage:', e)
-    return { ...defaultConfig }
+    return { ...defaultConfig, lang: detectSystemLang() }
   }
 }
 

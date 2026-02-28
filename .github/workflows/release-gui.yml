@@ -59,8 +59,59 @@ jobs:
             release/*.yml
           retention-days: 30
 
+  build-macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [arm64, x64]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install proxy dependencies
+        run: cd copilot-proxy && bun install
+
+      - name: Generate icons
+        run: node scripts/generate-icons.cjs
+
+      - name: Build frontend
+        run: npx vite build
+
+      - name: Build proxy server
+        run: |
+          mkdir -p build
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            bun build --compile --target=bun-darwin-arm64 copilot-proxy/src/main.ts --outfile build/copilot-proxy-server
+          else
+            bun build --compile --target=bun-darwin-x64 copilot-proxy/src/main.ts --outfile build/copilot-proxy-server
+          fi
+
+      - name: Package with electron-builder
+        run: npx electron-builder --mac --${{ matrix.arch }} --config electron-builder.yml
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-release-${{ matrix.arch }}
+          path: |
+            release/*.dmg
+            release/*.yml
+          retention-days: 30
+
   publish-release:
-    needs: [build-windows]
+    needs: [build-windows, build-macos]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:

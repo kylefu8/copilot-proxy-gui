@@ -222,7 +222,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   display: grid;
   gap: 8px;
   align-content: start;
-  padding-bottom: 18px;
+  padding-bottom: 30px;
 }
 
 .main-header {
@@ -468,7 +468,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .settings-page-inner {
   display: grid;
   gap: 8px;
-  padding-bottom: 18px;
+  padding-bottom: 30px;
 }
 
 .settings-header {

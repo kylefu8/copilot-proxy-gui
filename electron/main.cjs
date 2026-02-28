@@ -95,7 +95,8 @@ const preloadPath = path.resolve(__dirname, 'preload.cjs')
 let mainWin = null
 let tray = null
 let isQuitting = false
-let currentLang = 'zh'  // synced from renderer via IPC
+// Detect system language: use Chinese if locale starts with 'zh', otherwise English
+let currentLang = (app.getLocale() || '').toLowerCase().startsWith('zh') ? 'zh' : 'en'
 
 // ─── Main-process i18n (tray menu & error messages) ─────────────
 const mainI18n = {
@@ -1068,9 +1069,12 @@ function createWindow() {
     Menu.setApplicationMenu(null)
   }
 
+  const isMac = process.platform === 'darwin'
+
   mainWin = new BrowserWindow({
     width: 480,
-    height: 340,
+    height: isMac ? 380 : 340,
+    useContentSize: isMac,
     resizable: false,
     title: 'Copilot Proxy GUI',
     icon: icons.createAppIcon(),
@@ -1172,6 +1176,27 @@ ipcMain.handle('copilot-proxy:invoke', async (_event, request) => {
       return clearClaudeEnv()
     case 'check_claude_env':
       return checkClaudeEnv()
+    case 'check_claude_installed': {
+      // Check if 'claude' CLI is available in PATH
+      const candidates = ['claude']
+      const home = process.env.HOME || process.env.USERPROFILE
+      if (home) {
+        if (process.platform === 'win32') {
+          candidates.push(path.join(home, '.npm-global', 'claude.cmd'))
+          candidates.push(path.join(home, 'AppData', 'Roaming', 'npm', 'claude.cmd'))
+        } else {
+          candidates.push('/usr/local/bin/claude')
+          candidates.push(path.join(home, '.npm-global', 'bin', 'claude'))
+        }
+      }
+      for (const c of candidates) {
+        const r = spawnSync(c, ['--version'], { stdio: 'pipe', shell: false, timeout: 5000 })
+        if (r.status === 0) {
+          return { installed: true, version: String(r.stdout).trim(), path: c }
+        }
+      }
+      return { installed: false }
+    }
     case 'open_external': {
       const url = payload?.url
       if (url && (url.startsWith('https://') || url.startsWith('http://'))) {

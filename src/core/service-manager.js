@@ -193,6 +193,15 @@ export async function checkClaudeEnv() {
 }
 
 /**
+ * Check if Claude Code CLI is installed.
+ */
+export async function checkClaudeInstalled() {
+  const runtime = getRuntime()
+  if (runtime === 'web') return { installed: false }
+  return invokeDesktop('check_claude_installed')
+}
+
+/**
  * Delete the saved GitHub token file.
  */
 export async function deleteToken() {

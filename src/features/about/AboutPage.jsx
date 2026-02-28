@@ -14,7 +14,10 @@ export function AboutPage({ onBack }) {
     const el = contentRef.current
     if (!el) return
     const raf = requestAnimationFrame(() => {
-      const h = Math.max(el.offsetHeight, 200)
+      const parent = el.parentElement
+      const style = parent ? getComputedStyle(parent) : null
+      const pad = style ? (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0) : 0
+      const h = Math.max(el.offsetHeight + pad, 200)
       resizeWindow(480, h).catch(e => console.warn('Window resize failed:', e))
     })
     return () => cancelAnimationFrame(raf)

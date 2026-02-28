@@ -8,6 +8,7 @@ release/
 build/copilot-proxy-server.exe
 build/copilot-proxy-server
 build/icon.ico
+build/icon.icns
 build/icon.png
 
 # vite build output
@@ -15,3 +16,4 @@ dist/
 
 # lock files (use npm — keep package-lock.json)
 bun.lock
+.DS_Store

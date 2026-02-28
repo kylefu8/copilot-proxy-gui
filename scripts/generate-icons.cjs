@@ -209,4 +209,47 @@ const ico = toICO(pngBuffers)
 fs.writeFileSync(path.join(buildDir, 'icon.ico'), ico)
 console.log(`  ✓ icon.ico (${icoSizes.join(', ')}px, ${(ico.length / 1024).toFixed(1)} KB)`)
 
+// Generate .icns on macOS using iconutil
+if (process.platform === 'darwin') {
+  const { execSync } = require('node:child_process')
+  const iconsetDir = path.join(buildDir, 'icon.iconset')
+  if (!fs.existsSync(iconsetDir)) fs.mkdirSync(iconsetDir, { recursive: true })
+
+  // macOS .iconset requires specific filenames at 1x and 2x sizes
+  const iconsetSizes = [
+    { name: 'icon_16x16.png',      size: 16  },
+    { name: 'icon_16x16@2x.png',   size: 32  },
+    { name: 'icon_32x32.png',      size: 32  },
+    { name: 'icon_32x32@2x.png',   size: 64  },
+    { name: 'icon_128x128.png',    size: 128 },
+    { name: 'icon_128x128@2x.png', size: 256 },
+    { name: 'icon_256x256.png',    size: 256 },
+    { name: 'icon_256x256@2x.png', size: 512 },
+    { name: 'icon_512x512.png',    size: 512 },
+    { name: 'icon_512x512@2x.png', size: 1024 },
+  ]
+
+  for (const { name, size } of iconsetSizes) {
+    const png = toPNG(drawIcon(size))
+    fs.writeFileSync(path.join(iconsetDir, name), png)
+  }
+
+  const icnsPath = path.join(buildDir, 'icon.icns')
+  try {
+    execSync(`iconutil -c icns "${iconsetDir}" -o "${icnsPath}"`, { stdio: 'pipe' })
+    const icnsSize = (fs.statSync(icnsPath).size / 1024).toFixed(1)
+    console.log(`  ✓ icon.icns (${icnsSize} KB)`)
+  } catch (e) {
+    console.warn(`  ⚠ Failed to generate icon.icns: ${e.message}`)
+    console.warn('    Falling back to icon.png for macOS build')
+  }
+
+  // Clean up iconset directory
+  try {
+    fs.rmSync(iconsetDir, { recursive: true, force: true })
+  } catch { /* ignore */ }
+} else {
+  console.log('  ○ Skipping .icns generation (not macOS)')
+}
+
 console.log(`\n  Output directory: ${buildDir}`)

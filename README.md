@@ -35,7 +35,9 @@ A desktop GUI for [copilot-proxy](https://github.com/Jer-y/copilot-proxy), built
 - 5 built-in themes: Lavender (Frost), Peach (Sakura), Cherry, Midnight, Aurora / 5 套内置主题
 - Settings: port, account type, verbose logging, manual approval, rate limiting, etc. / 配置管理：端口、账号类型、详细日志、手动审批、速率限制等
 - System tray: start/stop, model info, minimize to tray / 系统托盘：启停控制、模型信息、最小化到托盘
-- Chinese/English bilingual support (one-click toggle) / 中英文双语支持（一键切换）
+- Chinese/English bilingual support (one-click toggle, auto-detects system language on first launch) / 中英文双语支持（一键切换，首次启动自动检测系统语言）
+- Claude Code installation check (warns and disables buttons if not installed) / Claude Code 安装检测（未安装时提示并禁用相关按钮）
+- Cross-platform support: Windows & macOS (arm64 + x64) / 跨平台支持：Windows 和 macOS（arm64 + x64）
 - Configurable close behavior (minimize to tray / quit / ask each time, with remember option) / 关闭窗口行为可配置
 
 ## Quick Start / 快速开始
@@ -47,10 +49,7 @@ Download from the [Releases](https://github.com/kylefu8/copilot-proxy-gui/releas
 从 [Releases](https://github.com/kylefu8/copilot-proxy-gui/releases) 页面下载：
 
 - **Windows**: Portable edition (`.exe`, no installation required) / 便携版，双击即用
-
-> macOS / Linux pre-built binaries are not available yet. Please build from source.
->
-> macOS / Linux 版本暂未提供预编译包，请从源码构建。
+- **macOS**: DMG installer (arm64 for Apple Silicon, x64 for Intel) / DMG 安装包（arm64 适用于 Apple Silicon，x64 适用于 Intel）
 
 ### Run from Source / 从源码运行
 
@@ -107,6 +106,7 @@ The proxy child process is automatically stopped when the window is closed. / �
 | `write_claude_env` | Write Claude config / 写入 Claude 配置 |
 | `clear_claude_env` | Clear Claude config / 清除 Claude 配置 |
 | `check_claude_env` | Check Claude config / 检查 Claude 配置 |
+| `check_claude_installed` | Check if Claude Code CLI is installed / 检查 Claude Code 是否已安装 |
 | `open_external` | Open external link / 打开外部链接 |
 | `resize_window` | Resize window / 调整窗口大小 |
 
