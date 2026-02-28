@@ -51,6 +51,24 @@ Download from the [Releases](https://github.com/kylefu8/copilot-proxy-gui/releas
 - **Windows**: Portable edition (`.exe`, no installation required) / 便携版，双击即用
 - **macOS**: DMG installer (arm64 for Apple Silicon, x64 for Intel) / DMG 安装包（arm64 适用于 Apple Silicon，x64 适用于 Intel）
 
+> **macOS 首次打开提示**
+>
+> 由于应用未经 Apple 公证，macOS 会提示"无法验证开发者"。请按以下步骤操作：
+>
+> 1. 双击 DMG 挂载，将应用拖入 Applications
+> 2. **右键（或 Control+点击）** 应用图标 → 选择 **"打开"** → 在弹窗中点 **"打开"**
+> 3. 如果右键没有"打开"选项，前往 **系统设置 → 隐私与安全性**，滚到底部点击 **"仍要打开"**
+> 4. 只需首次操作，之后可正常双击打开
+>
+> **macOS First Launch Note**
+>
+> The app is not notarized by Apple, so macOS will show a warning. To open it:
+>
+> 1. Double-click the DMG to mount, then drag the app to Applications
+> 2. **Right-click (or Control+click)** the app → select **"Open"** → click **"Open"** in the dialog
+> 3. If "Open" is not available, go to **System Settings → Privacy & Security**, scroll down and click **"Open Anyway"**
+> 4. This is only needed the first time; after that you can double-click to open normally
+
 ### Run from Source / 从源码运行
 
 ```sh
