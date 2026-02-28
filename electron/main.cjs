@@ -1177,22 +1177,52 @@ ipcMain.handle('copilot-proxy:invoke', async (_event, request) => {
     case 'check_claude_env':
       return checkClaudeEnv()
     case 'check_claude_installed': {
-      // Check if 'claude' CLI is available in PATH
-      const candidates = ['claude']
+      // Check if 'claude' CLI is available
+      // Strategy: use an interactive login shell to resolve the real PATH
+      // (this picks up nvm, fnm, volta, homebrew, etc. from .zshrc/.bashrc)
       const home = process.env.HOME || process.env.USERPROFILE
-      if (home) {
-        if (process.platform === 'win32') {
-          candidates.push(path.join(home, '.npm-global', 'claude.cmd'))
-          candidates.push(path.join(home, 'AppData', 'Roaming', 'npm', 'claude.cmd'))
-        } else {
-          candidates.push('/usr/local/bin/claude')
-          candidates.push(path.join(home, '.npm-global', 'bin', 'claude'))
+
+      if (process.platform !== 'win32') {
+        // macOS / Linux: spawn interactive login shell to get full PATH
+        const userShell = process.env.SHELL || '/bin/zsh'
+        const loginResult = spawnSync(userShell, ['-ilc', 'claude --version'], {
+          stdio: 'pipe',
+          timeout: 10000,
+          env: { ...process.env },
+        })
+        if (loginResult.status === 0) {
+          const version = String(loginResult.stdout).trim().split('\n').pop()
+          // Also resolve the actual path
+          const whichResult = spawnSync(userShell, ['-ilc', 'which claude'], {
+            stdio: 'pipe',
+            timeout: 5000,
+            env: { ...process.env },
+          })
+          const claudePath = String(whichResult.stdout).trim().split('\n').pop() || 'claude'
+          return { installed: true, version, path: claudePath }
         }
-      }
-      for (const c of candidates) {
-        const r = spawnSync(c, ['--version'], { stdio: 'pipe', shell: false, timeout: 5000 })
-        if (r.status === 0) {
-          return { installed: true, version: String(r.stdout).trim(), path: c }
+      } else {
+        // Windows: try shell: true (inherits cmd PATH), then check known paths
+        const shellResult = spawnSync('claude', ['--version'], {
+          stdio: 'pipe',
+          shell: true,
+          timeout: 5000,
+        })
+        if (shellResult.status === 0) {
+          return { installed: true, version: String(shellResult.stdout).trim(), path: 'claude' }
+        }
+        // Windows fallback: check well-known paths
+        const winCandidates = []
+        if (home) {
+          winCandidates.push(path.join(home, 'AppData', 'Roaming', 'npm', 'claude.cmd'))
+          winCandidates.push(path.join(home, '.npm-global', 'claude.cmd'))
+        }
+        for (const c of winCandidates) {
+          if (!fs.existsSync(c)) continue
+          const r = spawnSync(c, ['--version'], { stdio: 'pipe', shell: false, timeout: 5000 })
+          if (r.status === 0) {
+            return { installed: true, version: String(r.stdout).trim(), path: c }
+          }
         }
       }
       return { installed: false }
