@@ -28,11 +28,11 @@ mac:
   icon: build/icon.icns
   category: public.app-category.developer-tools
   identity: null
-  entitlements: build/entitlements.mac.plist
-  entitlementsInherit: build/entitlements.mac.plist
   extraResources:
     - from: build/copilot-proxy-server
       to: copilot-proxy-server
+
+afterPack: scripts/afterPack.cjs
 
 dmg:
   artifactName: "${productName}-${version}-${arch}.dmg"
