@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { resizeWindow } from '../../core/service-manager'
 import { useI18n } from '../../core/i18n'
 
-const APP_VERSION = '0.1.1'
+const APP_VERSION = window.copilotProxyDesktop?.appVersion || '0.0.0'
 const GUI_REPO = 'https://github.com/kylefu8/copilot-proxy-gui'
 const UPSTREAM_REPO = 'https://github.com/Jer-y/copilot-proxy'
 

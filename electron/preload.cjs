@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('copilotProxyDesktop', {
+  appVersion: require('../package.json').version,
   invoke(command, payload = {}) {
     return ipcRenderer.invoke('copilot-proxy:invoke', {
       command,
