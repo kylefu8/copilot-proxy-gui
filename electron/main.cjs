@@ -1035,9 +1035,9 @@ function updateTrayMenu() {
 
 function openLogWindow(payload) {
   if (logWin && !logWin.isDestroyed()) {
-    logWin.show()
-    logWin.focus()
-    return { ok: true, alreadyOpen: true }
+    logWin.close()
+    logWin = null
+    return { ok: true, closed: true }
   }
 
   logWin = new BrowserWindow({
@@ -1127,7 +1127,7 @@ function createWindow() {
     height: isMac ? 380 : 340,
     useContentSize: isMac,
     resizable: false,
-    title: 'Copilot Proxy GUI',
+    title: `Copilot Proxy GUI v${require('../package.json').version}`,
     icon: icons.createAppIcon(),
     webPreferences: {
       preload: preloadPath,
@@ -1151,10 +1151,16 @@ function createWindow() {
 
   if (process.env.COPILOT_GUI_DEV === '1') {
     mainWin.loadURL('http://localhost:5190')
+    mainWin.webContents.once('did-finish-load', () => {
+      if (mainWin) mainWin.setTitle(`Copilot Proxy GUI v${require('../package.json').version}`)
+    })
     return
   }
 
   mainWin.loadFile(path.resolve(__dirname, '..', 'dist', 'index.html'))
+  mainWin.webContents.once('did-finish-load', () => {
+    if (mainWin) mainWin.setTitle(`Copilot Proxy GUI v${require('../package.json').version}`)
+  })
 }
 
 // ─── Window Resizing ────────────────────────────────────────────────

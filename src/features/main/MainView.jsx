@@ -152,11 +152,11 @@ export function MainView({
             <button type="button" className="icon-btn lang-toggle" onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} title={t('header.lang')}>
               {lang === 'zh' ? 'EN' : '中'}
             </button>
-            <button type="button" className="icon-btn" onClick={() => openLogWindow(config.theme)} title={t('logs.openWindow')}>
-              📋
-            </button>
             <button type="button" className="icon-btn" onClick={onOpenSettings} title={t('header.settings')}>
               ⚙
+            </button>
+            <button type="button" className="icon-btn" onClick={() => openLogWindow(config.theme)} title={t('logs.openWindow')}>
+              📋
             </button>
             <button type="button" className="icon-btn" onClick={onOpenAbout} title={t('header.about')}>
               ℹ
