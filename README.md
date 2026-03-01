@@ -27,7 +27,7 @@
 
 - GitHub OAuth 登录（Device Code 流程，内置验证码弹窗）
 - 自动检测账号类型（个人 / 商业 / 企业）
-- 服务启停，实时日志查看（可调字号、自动滚动）
+- 服务启停，独立日志弹窗窗口（过滤、跟踪/暂停、可调字号、自动换行、主题同步）
 - 模型列表拉取 & 默认模型 / 快速模型选择（选择即保存）
 - Claude Code 集成：一键启动 & 写入/清除 `~/.claude/settings.json` 配置
 - 用量看板（配额进度条 + 详细数据折叠展示）
@@ -114,6 +114,8 @@ GUI 默认请求本地 `http://localhost:4399`，可在设置页修改端口。
 | `check_claude_installed` | 检查 Claude Code 是否已安装 |
 | `open_external` | 打开外部链接 |
 | `resize_window` | 调整窗口大小 |
+| `open_log_window` | 打开独立日志查看器窗口 |
+| `update_log_theme` | 同步主题到日志窗口 |
 
 ### 致谢
 
@@ -129,7 +131,7 @@ A desktop GUI for [copilot-proxy](https://github.com/Jer-y/copilot-proxy), built
 
 - GitHub OAuth login (Device Code flow, built-in verification code popup)
 - Auto-detect account type (individual / business / enterprise)
-- Service start/stop, real-time log viewer (adjustable font size, auto-scroll)
+- Service start/stop, standalone log viewer popup window (filter, follow/pause, adjustable font size, word wrap, theme sync)
 - Model list fetching & default/fast model selection (saves on select)
 - Claude Code integration: one-click launch & write/clear `~/.claude/settings.json`
 - Usage dashboard (quota progress bar + collapsible detail view)
@@ -216,6 +218,8 @@ The proxy child process is automatically stopped when the window is closed.
 | `check_claude_installed` | Check if Claude Code CLI is installed |
 | `open_external` | Open external link |
 | `resize_window` | Resize window |
+| `open_log_window` | Open standalone log viewer window |
+| `update_log_theme` | Sync theme to log viewer window |
 
 ### Acknowledgments
 
