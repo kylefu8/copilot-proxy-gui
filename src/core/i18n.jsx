@@ -90,6 +90,7 @@ const translations = {
 
     // ── Logs ──────────────────────────────────────
     'logs.title': 'Verbose 日志',
+    'logs.openWindow': '📋 打开日志窗口',
     'logs.following': '已跟随，点击停止',
     'logs.notFollowing': '未跟随，点击开启',
     'logs.fontSmaller': '缩小字体',
@@ -256,6 +257,7 @@ const translations = {
 
     // ── Logs ──────────────────────────────────────
     'logs.title': 'Verbose Logs',
+    'logs.openWindow': '📋 Open Log Window',
     'logs.following': 'Following, click to stop',
     'logs.notFollowing': 'Not following, click to start',
     'logs.fontSmaller': 'Smaller font',

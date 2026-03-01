@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { resizeWindow, launchClaudeCode, writeClaudeEnv, clearClaudeEnv, checkClaudeEnv, checkClaudeInstalled } from '../../core/service-manager'
+import { resizeWindow, launchClaudeCode, writeClaudeEnv, clearClaudeEnv, checkClaudeEnv, checkClaudeInstalled, openLogWindow, updateLogTheme } from '../../core/service-manager'
 import { themes, applyTheme } from '../../core/config-store'
 import { useI18n } from '../../core/i18n'
 
@@ -12,7 +12,6 @@ export function MainView({
   baseUrl,
   onOpenSettings,
   onOpenAbout,
-  getServiceLogs,
   getUsage,
   models,
   modelsLoading,
@@ -28,18 +27,12 @@ export function MainView({
   const [usage, setUsage] = useState(null)
   const [usageLoading, setUsageLoading] = useState(false)
   const [usageError, setUsageError] = useState('')
-  const [logs, setLogs] = useState([])
-  const [logsOpen, setLogsOpen] = useState(false)
   const [usageOpen, setUsageOpen] = useState(false)
   const [claudeLaunching, setClaudeLaunching] = useState(false)
   const [envWritten, setEnvWritten] = useState(false)
   const [envBusy, setEnvBusy] = useState(false)
   const [claudeInstalled, setClaudeInstalled] = useState(null) // null = checking, true/false = result
   const [themeOpen, setThemeOpen] = useState(false)
-  const [logFontSize, setLogFontSize] = useState(12)
-  const [logFollow, setLogFollow] = useState(true)
-  const logEndRef = useRef(null)
-  const pollRef = useRef(null)
   const themeRef = useRef(null)
   const contentRef = useRef(null)
 
@@ -72,7 +65,7 @@ export function MainView({
     const el = contentRef.current
     if (!el || !el.parentElement) return
 
-    const width = logsOpen ? 900 : 480
+    const width = 480
 
     function updateHeight() {
       const parent = el.parentElement
@@ -95,47 +88,7 @@ export function MainView({
       cancelAnimationFrame(raf)
       observer.disconnect()
     }
-  }, [logsOpen])
-
-  // Poll logs when expanded and service running
-  useEffect(() => {
-    if (!logsOpen || !isRunning) {
-      if (pollRef.current) {
-        clearInterval(pollRef.current)
-        pollRef.current = null
-      }
-      return
-    }
-
-    async function fetchLogs() {
-      try {
-        const result = await getServiceLogs()
-        if (result?.lines) {
-          setLogs(result.lines)
-        }
-      }
-      catch (e) {
-        console.warn('Failed to fetch logs:', e)
-      }
-    }
-
-    fetchLogs()
-    pollRef.current = setInterval(fetchLogs, 2000)
-
-    return () => {
-      if (pollRef.current) {
-        clearInterval(pollRef.current)
-        pollRef.current = null
-      }
-    }
-  }, [logsOpen, isRunning, getServiceLogs])
-
-  // Auto-scroll logs
-  useEffect(() => {
-    if (logsOpen && logFollow && logEndRef.current) {
-      logEndRef.current.scrollIntoView({ behavior: 'smooth' })
-    }
-  }, [logs, logsOpen, logFollow])
+  }, [])
 
   const refreshUsage = useCallback(async () => {
     setUsageLoading(true)
@@ -159,7 +112,7 @@ export function MainView({
   const statusLabel = serviceBusy ? (isRunning ? t('status.stopping') : t('status.starting')) : isRunning ? t('status.running') : service.status === 'error' ? t('status.error') : t('status.stopped')
 
   return (
-    <div className={`main-layout ${logsOpen ? 'logs-open' : ''}`}>
+    <div className="main-layout">
       {/* Left: main content */}
       <div className="main-view">
         <div className="main-view-inner" ref={contentRef}>
@@ -186,6 +139,7 @@ export function MainView({
                       onClick={() => {
                         onChangeConfig('theme', th.id)
                         applyTheme(th.id)
+                        updateLogTheme(th.id)
                         setThemeOpen(false)
                       }}
                     >
@@ -198,7 +152,7 @@ export function MainView({
             <button type="button" className="icon-btn lang-toggle" onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} title={t('header.lang')}>
               {lang === 'zh' ? 'EN' : '中'}
             </button>
-            <button type="button" className="icon-btn" onClick={() => setLogsOpen(v => !v)} title={t('header.logs')}>
+            <button type="button" className="icon-btn" onClick={() => openLogWindow(config.theme)} title={t('logs.openWindow')}>
               📋
             </button>
             <button type="button" className="icon-btn" onClick={onOpenSettings} title={t('header.settings')}>
@@ -407,38 +361,6 @@ export function MainView({
 
         </div>
       </div>
-
-      {logsOpen && (
-        <aside className="log-sidebar">
-          <div className="log-sidebar-header">
-            <span className="log-sidebar-title">{t('logs.title')}</span>
-            <div className="log-toolbar">
-              <button
-                type="button"
-                className={`icon-btn icon-btn-sm${logFollow ? ' active' : ''}`}
-                onClick={() => setLogFollow(v => !v)}
-                title={logFollow ? t('logs.following') : t('logs.notFollowing')}
-              >
-                {logFollow ? '↓' : '∥'}
-              </button>
-              <button type="button" className="icon-btn icon-btn-sm" onClick={() => setLogFontSize(s => Math.max(8, s - 1))} title={t('logs.fontSmaller')}>A−</button>
-              <button type="button" className="icon-btn icon-btn-sm" onClick={() => setLogFontSize(s => Math.min(20, s + 1))} title={t('logs.fontLarger')}>A+</button>
-              <button type="button" className="icon-btn" onClick={() => setLogsOpen(false)} title={t('close')}>✕</button>
-            </div>
-          </div>
-          <div className="log-sidebar-body">
-            {logs.length === 0 && (
-              <p className="hint">{isRunning ? t('logs.waiting') : t('logs.notRunning')}</p>
-            )}
-            {logs.length > 0 && (
-              <pre className="log-pre log-fill" style={{ fontSize: `${logFontSize}px` }}>
-                {logs.join('\n')}
-                <span ref={logEndRef} />
-              </pre>
-            )}
-          </div>
-        </aside>
-      )}
     </div>
   )
 }

@@ -130,6 +130,24 @@ export async function getServiceLogs() {
 }
 
 /**
+ * Open a dedicated log viewer popup window.
+ */
+export async function openLogWindow(theme) {
+  const runtime = getRuntime()
+  if (runtime === 'web') return { ok: false }
+  return invokeDesktop('open_log_window', { theme })
+}
+
+/**
+ * Update the log viewer window's theme.
+ */
+export async function updateLogTheme(theme) {
+  const runtime = getRuntime()
+  if (runtime === 'web') return { ok: false }
+  return invokeDesktop('update_log_theme', { theme })
+}
+
+/**
  * Resize the Electron window.
  */
 export async function resizeWindow(width, height) {

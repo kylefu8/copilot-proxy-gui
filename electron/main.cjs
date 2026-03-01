@@ -91,8 +91,10 @@ function findRepoRoot() {
 }
 const repoRoot = isPackaged ? null : findRepoRoot()
 const preloadPath = path.resolve(__dirname, 'preload.cjs')
+const logPreloadPath = path.resolve(__dirname, 'log-preload.cjs')
 
 let mainWin = null
+let logWin = null
 let tray = null
 let isQuitting = false
 // Detect system language: use Chinese if locale starts with 'zh', otherwise English
@@ -421,6 +423,10 @@ function serviceStart(payload) {
     serviceLogs.push(line)
     if (serviceLogs.length > MAX_LOG_LINES) {
       serviceLogs = serviceLogs.slice(-MAX_LOG_LINES)
+    }
+    // Push to log viewer window in real-time
+    if (logWin && !logWin.isDestroyed()) {
+      logWin.webContents.send('copilot-proxy:log-update', serviceLogs)
     }
   }
 
@@ -1025,6 +1031,51 @@ function updateTrayMenu() {
   tray.setContextMenu(menu)
 }
 
+// ─── Log Viewer Window ──────────────────────────────────────────────
+
+function openLogWindow(payload) {
+  if (logWin && !logWin.isDestroyed()) {
+    logWin.show()
+    logWin.focus()
+    return { ok: true, alreadyOpen: true }
+  }
+
+  logWin = new BrowserWindow({
+    width: 900,
+    height: 600,
+    minWidth: 480,
+    minHeight: 300,
+    resizable: true,
+    title: 'Copilot Proxy – Logs',
+    icon: icons.createAppIcon(),
+    webPreferences: {
+      preload: logPreloadPath,
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  })
+
+  // Remove menu bar on Windows for clean look
+  if (process.platform !== 'darwin') {
+    logWin.setMenuBarVisibility(false)
+  }
+
+  logWin.loadFile(path.resolve(__dirname, 'log-viewer.html'))
+
+  logWin.on('closed', () => { logWin = null })
+
+  // Send current logs once the window is ready
+  logWin.webContents.once('did-finish-load', () => {
+    if (logWin && !logWin.isDestroyed()) {
+      logWin.webContents.send('copilot-proxy:log-update', serviceLogs)
+      const theme = payload?.theme || 'midnight'
+      logWin.webContents.send('copilot-proxy:theme-update', theme)
+    }
+  })
+
+  return { ok: true, alreadyOpen: false }
+}
+
 // ─── Electron Window ────────────────────────────────────────────────
 
 function createWindow() {
@@ -1147,6 +1198,14 @@ ipcMain.handle('copilot-proxy:invoke', async (_event, request) => {
       return authDeviceCodeFlow(payload)
     case 'service_logs':
       return { lines: serviceLogs }
+    case 'open_log_window':
+      return openLogWindow(payload)
+    case 'update_log_theme': {
+      if (logWin && !logWin.isDestroyed()) {
+        logWin.webContents.send('copilot-proxy:theme-update', payload?.theme || 'midnight')
+      }
+      return { ok: true }
+    }
     case 'delete_token': {
       deleteTokenFile()
       return { ok: true, tokenPath: githubTokenPath() }

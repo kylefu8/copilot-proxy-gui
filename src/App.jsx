@@ -12,7 +12,6 @@ import {
   deleteToken,
   fetchModelsFromCopilot,
   getAuthStatus,
-  getServiceLogs,
   getServiceState,
   markServiceRunning,
   markServiceStopped,
@@ -352,7 +351,6 @@ function AppInner() {
       baseUrl={baseUrl}
       onOpenSettings={() => setPage('settings')}
       onOpenAbout={() => setPage('about')}
-      getServiceLogs={getServiceLogs}
       getUsage={getUsage}
       models={models}
       modelsLoading={modelsLoading}

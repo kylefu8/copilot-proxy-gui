@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Copilot Proxy – Logs</title>
+  <style>
+    :root {
+      --bg: #121829;
+      --text: #c8cfe0;
+      --dim: #6b7794;
+      --accent: #6d8cff;
+      --toolbar-bg: #1a2240;
+      --border: #2a3558;
+      --green: #6ee7b7;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+    }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: var(--toolbar-bg);
+      border-bottom: 1px solid var(--border);
+      -webkit-app-region: drag;
+      flex-shrink: 0;
+    }
+    .toolbar button, .toolbar select {
+      -webkit-app-region: no-drag;
+    }
+    .toolbar-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      margin-right: auto;
+    }
+    .toolbar button {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 2px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-family: inherit;
+    }
+    .toolbar button:hover {
+      background: var(--border);
+    }
+    .toolbar button.active {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .log-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 12px;
+      font-size: 12px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .log-container .log-line {
+      display: block;
+    }
+    .log-container .log-line:hover {
+      background: rgba(109, 140, 255, 0.08);
+    }
+    .hint {
+      color: var(--dim);
+      font-style: italic;
+      text-align: center;
+      padding: 40px 20px;
+    }
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 3px 12px;
+      background: var(--toolbar-bg);
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--dim);
+      flex-shrink: 0;
+    }
+    .line-count { margin-left: auto; }
+    /* Scrollbar styling */
+    .log-container::-webkit-scrollbar { width: 8px; }
+    .log-container::-webkit-scrollbar-track { background: var(--bg); }
+    .log-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .log-container::-webkit-scrollbar-thumb:hover { background: var(--dim); }
+
+    /* Filter highlight */
+    .log-line.filtered { display: none; }
+    .filter-input {
+      -webkit-app-region: no-drag;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: inherit;
+      width: 160px;
+    }
+    .filter-input::placeholder { color: var(--dim); }
+    .filter-input:focus { outline: none; border-color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <span class="toolbar-title">📋 Logs</span>
+    <input type="text" class="filter-input" id="filterInput" placeholder="Filter..." />
+    <button id="followBtn" class="active" title="Auto-scroll">↓ Follow</button>
+    <button id="fontDownBtn" title="Smaller font">A−</button>
+    <button id="fontUpBtn" title="Larger font">A+</button>
+    <button id="clearBtn" title="Clear">🗑</button>
+    <button id="wrapBtn" class="active" title="Word wrap">↩ Wrap</button>
+  </div>
+  <div class="log-container" id="logContainer">
+    <div class="hint" id="hintText">Waiting for logs...</div>
+  </div>
+  <div class="status-bar">
+    <span id="statusText">Idle</span>
+    <span class="line-count" id="lineCount">0 lines</span>
+  </div>
+
+  <script>
+    const logContainer = document.getElementById('logContainer')
+    const hintText = document.getElementById('hintText')
+    const followBtn = document.getElementById('followBtn')
+    const fontDownBtn = document.getElementById('fontDownBtn')
+    const fontUpBtn = document.getElementById('fontUpBtn')
+    const clearBtn = document.getElementById('clearBtn')
+    const wrapBtn = document.getElementById('wrapBtn')
+    const filterInput = document.getElementById('filterInput')
+    const statusText = document.getElementById('statusText')
+    const lineCountEl = document.getElementById('lineCount')
+
+    let follow = true
+    let fontSize = 12
+    let wordWrap = true
+    let allLines = []
+    let filterText = ''
+
+    followBtn.addEventListener('click', () => {
+      follow = !follow
+      followBtn.classList.toggle('active', follow)
+      followBtn.textContent = follow ? '↓ Follow' : '∥ Paused'
+      if (follow) scrollToBottom()
+    })
+
+    fontDownBtn.addEventListener('click', () => {
+      fontSize = Math.max(8, fontSize - 1)
+      logContainer.style.fontSize = fontSize + 'px'
+    })
+
+    fontUpBtn.addEventListener('click', () => {
+      fontSize = Math.min(24, fontSize + 1)
+      logContainer.style.fontSize = fontSize + 'px'
+    })
+
+    clearBtn.addEventListener('click', () => {
+      allLines = []
+      renderLines()
+    })
+
+    wrapBtn.addEventListener('click', () => {
+      wordWrap = !wordWrap
+      wrapBtn.classList.toggle('active', wordWrap)
+      logContainer.style.whiteSpace = wordWrap ? 'pre-wrap' : 'pre'
+      logContainer.style.overflowX = wordWrap ? 'hidden' : 'auto'
+    })
+
+    filterInput.addEventListener('input', () => {
+      filterText = filterInput.value.toLowerCase()
+      applyFilter()
+    })
+
+    function scrollToBottom() {
+      logContainer.scrollTop = logContainer.scrollHeight
+    }
+
+    function applyFilter() {
+      const spans = logContainer.querySelectorAll('.log-line')
+      spans.forEach(span => {
+        if (!filterText || span.textContent.toLowerCase().includes(filterText)) {
+          span.classList.remove('filtered')
+        } else {
+          span.classList.add('filtered')
+        }
+      })
+    }
+
+    function renderLines() {
+      if (allLines.length === 0) {
+        logContainer.innerHTML = '<div class="hint">Waiting for logs...</div>'
+        lineCountEl.textContent = '0 lines'
+        return
+      }
+
+      // Build DOM efficiently
+      const fragment = document.createDocumentFragment()
+      for (const line of allLines) {
+        const span = document.createElement('span')
+        span.className = 'log-line'
+        span.textContent = line + '\n'
+        if (filterText && !line.toLowerCase().includes(filterText)) {
+          span.classList.add('filtered')
+        }
+        fragment.appendChild(span)
+      }
+      logContainer.innerHTML = ''
+      logContainer.appendChild(fragment)
+      lineCountEl.textContent = allLines.length + ' lines'
+
+      if (follow) {
+        requestAnimationFrame(scrollToBottom)
+      }
+    }
+
+    // Listen for log updates from main process
+    if (window.logViewerAPI) {
+      window.logViewerAPI.onLogUpdate((lines) => {
+        allLines = lines
+        renderLines()
+        statusText.textContent = 'Connected'
+      })
+
+      window.logViewerAPI.onThemeUpdate((theme) => {
+        applyTheme(theme)
+      })
+    }
+
+    function applyTheme(theme) {
+      const themes = {
+        midnight: { bg: '#121829', text: '#c8cfe0', dim: '#6b7794', accent: '#6d8cff', toolbarBg: '#1a2240', border: '#2a3558' },
+        aurora:   { bg: '#0c0a1a', text: '#d8d2f0', dim: '#7a6fa8', accent: '#a855f7', toolbarBg: '#15122a', border: '#2d2654' },
+        frost:    { bg: '#f5f0ff', text: '#1e1535', dim: '#6b5b8a', accent: '#7c3aed', toolbarBg: '#ede4ff', border: '#ddd0f2' },
+        sakura:   { bg: '#fff4ec', text: '#2c1810', dim: '#8c6048', accent: '#e8602c', toolbarBg: '#ffe8d8', border: '#f0c8a8' },
+        cherry:   { bg: '#fdf0f4', text: '#2e0e1e', dim: '#8a4566', accent: '#e0457b', toolbarBg: '#f8e0ea', border: '#eab0c4' },
+      }
+      const t = themes[theme] || themes.midnight
+      document.documentElement.style.setProperty('--bg', t.bg)
+      document.documentElement.style.setProperty('--text', t.text)
+      document.documentElement.style.setProperty('--dim', t.dim)
+      document.documentElement.style.setProperty('--accent', t.accent)
+      document.documentElement.style.setProperty('--toolbar-bg', t.toolbarBg)
+      document.documentElement.style.setProperty('--border', t.border)
+    }
+  </script>
+</body>
+</html>
