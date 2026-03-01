@@ -22,12 +22,16 @@ export function MainView({
   onSaveConfig,
   showToast,
   authStatus,
+  usageOpen,
+  onToggleUsage,
+  usage,
+  setUsage,
+  usageLoading,
+  setUsageLoading,
+  usageError,
+  setUsageError,
 }) {
   const { t, lang, setLang } = useI18n()
-  const [usage, setUsage] = useState(null)
-  const [usageLoading, setUsageLoading] = useState(false)
-  const [usageError, setUsageError] = useState('')
-  const [usageOpen, setUsageOpen] = useState(false)
   const [claudeLaunching, setClaudeLaunching] = useState(false)
   const [envWritten, setEnvWritten] = useState(false)
   const [envBusy, setEnvBusy] = useState(false)
@@ -290,7 +294,7 @@ export function MainView({
         <details
           className="collapse-section"
           open={usageOpen}
-          onToggle={e => setUsageOpen(e.target.open)}
+          onToggle={e => onToggleUsage(e.target.open)}
         >
           <summary>
             <span>{t('usage.title')}</span>

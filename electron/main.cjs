@@ -80,6 +80,10 @@ function httpsGet(url, headers, timeoutMs) {
   })
 }
 
+// Ensure dev mode uses the same userData directory as the packaged app,
+// so token files and settings are shared across both modes.
+app.setName('copilot-proxy-gui')
+
 const isPackaged = app.isPackaged
 // Locate proxy source: submodule (copilot-proxy/) or monorepo (../../)
 function findRepoRoot() {
@@ -420,7 +424,10 @@ function serviceStart(payload) {
   }
 
   function pushLog(line) {
-    serviceLogs.push(line)
+    // Prepend timestamp if the line doesn't already have one
+    const ts = new Date().toISOString().replace('T', ' ').slice(0, 23)
+    const stamped = line.startsWith('[2') ? line : `[${ts}] ${line}`
+    serviceLogs.push(stamped)
     if (serviceLogs.length > MAX_LOG_LINES) {
       serviceLogs = serviceLogs.slice(-MAX_LOG_LINES)
     }
@@ -1133,6 +1140,7 @@ function createWindow() {
       preload: preloadPath,
       contextIsolation: true,
       nodeIntegration: false,
+      additionalArguments: [`--app-version=${require('../package.json').version}`],
     },
   })
 

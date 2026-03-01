@@ -1,7 +1,11 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
+// Read version passed from main process via additionalArguments
+// (cannot use require('../package.json') in sandboxed preload)
+const appVersion = (process.argv.find(a => a.startsWith('--app-version=')) || '').split('=')[1] || '0.0.0'
+
 contextBridge.exposeInMainWorld('copilotProxyDesktop', {
-  appVersion: require('../package.json').version,
+  appVersion,
   invoke(command, payload = {}) {
     return ipcRenderer.invoke('copilot-proxy:invoke', {
       command,

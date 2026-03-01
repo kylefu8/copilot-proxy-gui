@@ -35,6 +35,10 @@ function AppInner() {
   const [modelsError, setModelsError] = useState(null)
   const [showRiskDialog, setShowRiskDialog] = useState(false)
   const [showCloseDialog, setShowCloseDialog] = useState(false)
+  const [usageOpen, setUsageOpen] = useState(false)
+  const [usage, setUsage] = useState(null)
+  const [usageLoading, setUsageLoading] = useState(false)
+  const [usageError, setUsageError] = useState('')
   const pendingStartRef = useRef(false)
   const triggerStartRef = useRef(() => {})
   const configRef = useRef(config)
@@ -361,6 +365,14 @@ function AppInner() {
       onSaveConfig={persistConfig}
       showToast={showToast}
       authStatus={authStatus}
+      usageOpen={usageOpen}
+      onToggleUsage={setUsageOpen}
+      usage={usage}
+      setUsage={setUsage}
+      usageLoading={usageLoading}
+      setUsageLoading={setUsageLoading}
+      usageError={usageError}
+      setUsageError={setUsageError}
     />
     {showRiskDialog && (
       <RiskDialog
