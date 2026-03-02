@@ -35,10 +35,6 @@ jobs:
         with:
           submodules: true
 
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -47,7 +43,7 @@ jobs:
         run: npm ci
 
       - name: Install proxy dependencies
-        run: cd copilot-proxy && bun install
+        run: cd copilot-proxy && npm install --ignore-scripts
 
       - name: Generate icons
         run: node scripts/generate-icons.cjs
@@ -55,11 +51,8 @@ jobs:
       - name: Build frontend
         run: npx vite build
 
-      - name: Build proxy server
-        shell: bash
-        run: |
-          mkdir -p build
-          bun build --compile --target=bun-windows-x64 copilot-proxy/src/main.ts --outfile build/copilot-proxy-server.exe
+      - name: Bundle proxy server (JS)
+        run: node scripts/bundle-proxy.cjs
 
       - name: Package with electron-builder
         run: npx electron-builder --win --config electron-builder.yml
@@ -92,10 +85,6 @@ jobs:
         with:
           submodules: true
 
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -104,7 +93,7 @@ jobs:
         run: npm ci
 
       - name: Install proxy dependencies
-        run: cd copilot-proxy && bun install
+        run: cd copilot-proxy && npm install --ignore-scripts
 
       - name: Generate icons
         run: node scripts/generate-icons.cjs
@@ -112,15 +101,8 @@ jobs:
       - name: Build frontend
         run: npx vite build
 
-      - name: Build proxy server
-        run: |
-          mkdir -p build
-          if [ "${{ matrix.arch }}" = "arm64" ]; then
-            bun build --compile --target=bun-darwin-arm64 copilot-proxy/src/main.ts --outfile build/copilot-proxy-server
-          else
-            bun build --compile --target=bun-darwin-x64 copilot-proxy/src/main.ts --outfile build/copilot-proxy-server
-          fi
-          chmod +x build/copilot-proxy-server
+      - name: Bundle proxy server (JS)
+        run: node scripts/bundle-proxy.cjs
 
       - name: Package with electron-builder
         run: npx electron-builder --mac --${{ matrix.arch }} --config electron-builder.yml

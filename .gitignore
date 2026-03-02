@@ -4,7 +4,9 @@ node_modules/
 # electron-builder output
 release/
 
-# build artifacts (proxy exe, generated icons, etc.)
+# build artifacts (proxy bundle, legacy exe, generated icons, etc.)
+build/copilot-proxy-bundle.mjs
+build/copilot-proxy-bundle.mjs.map
 build/copilot-proxy-server.exe
 build/copilot-proxy-server
 build/icon.ico
