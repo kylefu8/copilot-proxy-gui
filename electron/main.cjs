@@ -3,6 +3,7 @@ const os = require('node:os')
 const path = require('node:path')
 const https = require('node:https')
 const { spawn, spawnSync } = require('node:child_process')
+const crypto = require('node:crypto')
 const { app, BrowserWindow, ipcMain, shell, dialog, Menu, Tray, nativeImage, safeStorage } = require('electron')
 
 /**
@@ -140,6 +141,10 @@ const mainI18n = {
     'auth.retrying': '重试中',
     'app.alreadyRunning': '程序已在运行中',
     'app.alreadyRunningDetail': '另一个 Copilot Proxy GUI 实例已在运行，将切换到该窗口。',
+    'update.check': '检查更新',
+    'update.newVersion': '🔔 有新版本 v{v}',
+    'update.latest': '已是最新版本',
+    'update.failed': '更新检查失败',
   },
   en: {
     'tray.stopped': 'Stopped',
@@ -175,6 +180,10 @@ const mainI18n = {
     'auth.retrying': 'retrying',
     'app.alreadyRunning': 'Application Already Running',
     'app.alreadyRunningDetail': 'Another instance of Copilot Proxy GUI is already running. Switching to that window.',
+    'update.check': 'Check for Updates',
+    'update.newVersion': '🔔 Update Available v{v}',
+    'update.latest': 'Already up to date',
+    'update.failed': 'Update check failed',
   },
 }
 function mt(key) { return mainI18n[currentLang]?.[key] ?? mainI18n.zh[key] ?? key }
@@ -188,6 +197,19 @@ const MAX_LOG_LINES = 500
 let serviceLogs = []
 let lastServicePayload = null   // remembered for tray "Start" action
 let lastModelName = ''          // model name shown in tray tooltip
+
+// ─── Update state ────────────────────────────────────────────────────
+let updateState = {
+  checking: false,
+  available: false,
+  downloading: false,
+  progress: 0,
+  latestVersion: null,
+  releaseUrl: null,
+  manifestData: null,
+  lightweightPossible: false,
+  error: null,
+}
 
 // Token & config are stored under Electron's userData directory:
 //   Windows:  %APPDATA%/copilot-proxy-gui/
@@ -389,12 +411,27 @@ function serviceStart(payload) {
   serviceLogs = []
 
   if (isPackaged) {
-    // Check for bundled standalone proxy exe first (full build)
-    const proxyName = process.platform === 'win32' ? 'copilot-proxy-server.exe' : 'copilot-proxy-server'
-    const proxyExe = path.join(process.resourcesPath, proxyName)
-    if (fs.existsSync(proxyExe)) {
+    // Prefer JS bundle (lightweight) over legacy bun-compiled binary
+    const bundlePath = path.join(process.resourcesPath, 'copilot-proxy-bundle.mjs')
+    const legacyBinaryName = process.platform === 'win32' ? 'copilot-proxy-server.exe' : 'copilot-proxy-server'
+    const legacyBinaryPath = path.join(process.resourcesPath, legacyBinaryName)
+
+    if (fs.existsSync(bundlePath)) {
+      // New approach: run JS bundle with Electron's built-in Node.js
       serviceChild = spawn(
-        proxyExe,
+        process.execPath,
+        [bundlePath, ...args],
+        {
+          stdio: ['ignore', 'pipe', 'pipe'],
+          windowsHide: true,
+          shell: false,
+          env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+        },
+      )
+    } else if (fs.existsSync(legacyBinaryPath)) {
+      // Fallback: legacy bun-compiled binary
+      serviceChild = spawn(
+        legacyBinaryPath,
         args,
         {
           stdio: ['ignore', 'pipe', 'pipe'],
@@ -403,24 +440,42 @@ function serviceStart(payload) {
         },
       )
     } else {
-      throw new Error('Bundled proxy server not found at: ' + proxyExe + '\nPlease rebuild with: npm run desktop:build')
+      throw new Error('Proxy server not found. Looked for:\n  ' + bundlePath + '\n  ' + legacyBinaryPath + '\nPlease rebuild with: npm run desktop:build')
     }
   } else {
-    // Dev mode: use bun to run source
-    const bunInfo = resolveBunExecutable()
-    if (!bunInfo) {
-      throw new Error('bun not found in PATH or ~/.bun/bin')
+    // Dev mode: run JS bundle or source with Node.js / bun
+    const devBundlePath = path.join(__dirname, '..', 'build', 'copilot-proxy-bundle.mjs')
+    if (fs.existsSync(devBundlePath)) {
+      // Use pre-built JS bundle with Node.js
+      serviceChild = spawn(
+        process.execPath,
+        [devBundlePath, ...args],
+        {
+          stdio: ['ignore', 'pipe', 'pipe'],
+          windowsHide: true,
+          shell: false,
+          env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+        },
+      )
+    } else if (repoRoot) {
+      // Fallback: use bun to run source
+      const bunInfo = resolveBunExecutable()
+      if (!bunInfo) {
+        throw new Error('Neither build/copilot-proxy-bundle.mjs nor bun found.\nRun: node scripts/bundle-proxy.cjs')
+      }
+      serviceChild = spawn(
+        bunInfo.bin,
+        ['run', 'src/main.ts', ...args],
+        {
+          cwd: repoRoot,
+          stdio: ['ignore', 'pipe', 'pipe'],
+          windowsHide: true,
+          shell: false,
+        },
+      )
+    } else {
+      throw new Error('Proxy server not found. Run: node scripts/bundle-proxy.cjs')
     }
-    serviceChild = spawn(
-      bunInfo.bin,
-      ['run', 'src/main.ts', ...args],
-      {
-        cwd: repoRoot,
-        stdio: ['ignore', 'pipe', 'pipe'],
-        windowsHide: true,
-        shell: false,
-      },
-    )
   }
 
   function pushLog(line) {
@@ -481,6 +536,210 @@ function serviceStop() {
     ok: true,
     message: 'service stopped',
   }
+}
+
+// ─── Self-update ────────────────────────────────────────────────────
+
+const REPO_OWNER = 'kylefu8'
+const REPO_NAME = 'copilot-proxy-gui'
+const UPDATE_CHECK_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest`
+
+function notifyUpdateState() {
+  if (mainWin && !mainWin.isDestroyed()) {
+    mainWin.webContents.send('copilot-proxy:update-state', { ...updateState })
+  }
+  updateTrayMenu()
+}
+
+function compareVersions(a, b) {
+  const pa = String(a).replace(/^v/, '').replace(/-.*$/, '').split('.').map(Number)
+  const pb = String(b).replace(/^v/, '').replace(/-.*$/, '').split('.').map(Number)
+  for (let i = 0; i < 3; i++) {
+    const va = pa[i] || 0
+    const vb = pb[i] || 0
+    if (va > vb) return 1
+    if (va < vb) return -1
+  }
+  return 0
+}
+
+/**
+ * Download a file over HTTPS, following redirects (GitHub → S3).
+ * Returns a Buffer. Calls onProgress(downloaded, total) during download.
+ */
+function httpsDownload(url, onProgress) {
+  return new Promise((resolve, reject) => {
+    const doRequest = (reqUrl, redirectCount = 0) => {
+      if (redirectCount > 5) return reject(new Error('Too many redirects'))
+
+      const u = new URL(reqUrl)
+      const proto = u.protocol === 'https:' ? https : require('node:http')
+
+      proto.get(reqUrl, {
+        headers: { 'user-agent': `CopilotProxyGUI/${require('../package.json').version}` },
+      }, (res) => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          res.resume()
+          const next = res.headers.location.startsWith('http')
+            ? res.headers.location
+            : new URL(res.headers.location, reqUrl).href
+          return doRequest(next, redirectCount + 1)
+        }
+
+        if (res.statusCode !== 200) {
+          res.resume()
+          return reject(new Error(`Download failed: HTTP ${res.statusCode}`))
+        }
+
+        const totalSize = parseInt(res.headers['content-length'], 10) || 0
+        const chunks = []
+        let downloaded = 0
+
+        res.on('data', (chunk) => {
+          chunks.push(chunk)
+          downloaded += chunk.length
+          if (onProgress && totalSize) onProgress(downloaded, totalSize)
+        })
+        res.on('end', () => resolve(Buffer.concat(chunks)))
+        res.on('error', reject)
+      }).on('error', reject)
+    }
+
+    doRequest(url)
+  })
+}
+
+async function checkForUpdates() {
+  const currentVersion = require('../package.json').version
+
+  updateState = { ...updateState, checking: true, error: null }
+  notifyUpdateState()
+
+  try {
+    const res = await httpsGet(UPDATE_CHECK_URL, {
+      'user-agent': `CopilotProxyGUI/${currentVersion}`,
+    }, 15000)
+
+    if (!res.ok) throw new Error(`GitHub API error: HTTP ${res.status}`)
+
+    const release = res.json
+    const latestVersion = (release.tag_name || '').replace(/^v/, '')
+
+    if (compareVersions(latestVersion, currentVersion) <= 0) {
+      updateState = { ...updateState, checking: false, available: false, latestVersion }
+      notifyUpdateState()
+      return { upToDate: true, currentVersion, latestVersion }
+    }
+
+    // New version available — check for lightweight update manifest
+    const manifestAsset = (release.assets || []).find(a => a.name === 'update-manifest.json')
+    let manifestData = null
+    let lightweightPossible = false
+
+    if (manifestAsset) {
+      try {
+        const mBuf = await httpsDownload(manifestAsset.browser_download_url)
+        manifestData = JSON.parse(mBuf.toString('utf8'))
+        const electronVersion = process.versions.electron
+        if (!manifestData.minElectronVersion || compareVersions(electronVersion, manifestData.minElectronVersion) >= 0) {
+          lightweightPossible = true
+        }
+      } catch (e) {
+        console.warn('Failed to fetch update manifest:', e)
+      }
+    }
+
+    updateState = {
+      ...updateState,
+      checking: false,
+      available: true,
+      latestVersion,
+      releaseUrl: release.html_url,
+      manifestData,
+      lightweightPossible,
+    }
+    notifyUpdateState()
+
+    return { upToDate: false, currentVersion, latestVersion, releaseUrl: release.html_url, lightweightPossible }
+  } catch (e) {
+    updateState = { ...updateState, checking: false, error: e.message || String(e) }
+    notifyUpdateState()
+    return { error: true, message: e.message || String(e) }
+  }
+}
+
+async function applyLightweightUpdate() {
+  if (!updateState.available || !updateState.lightweightPossible || !updateState.manifestData) {
+    return { error: true, message: 'No lightweight update available' }
+  }
+  if (updateState.downloading) return { error: true, message: 'Already downloading' }
+
+  const manifest = updateState.manifestData
+  const expectedAssets = manifest.assets || {}
+
+  // Fetch release to get asset download URLs
+  const res = await httpsGet(UPDATE_CHECK_URL, {
+    'user-agent': `CopilotProxyGUI/${require('../package.json').version}`,
+  }, 15000)
+  if (!res.ok) throw new Error('Failed to fetch release info')
+
+  const releaseAssets = res.json.assets || []
+
+  updateState = { ...updateState, downloading: true, progress: 0, error: null }
+  notifyUpdateState()
+
+  try {
+    const resourcesPath = process.resourcesPath
+    let filesDone = 0
+    const filesToUpdate = []
+
+    // Determine which assets to download
+    const bundleAsset = releaseAssets.find(a => a.name === 'copilot-proxy-bundle.mjs')
+    const asarAsset = releaseAssets.find(a => a.name === 'app.asar')
+    if (bundleAsset) filesToUpdate.push({ asset: bundleAsset, key: 'copilot-proxy-bundle.mjs' })
+    if (asarAsset) filesToUpdate.push({ asset: asarAsset, key: 'app.asar' })
+
+    if (filesToUpdate.length === 0) {
+      throw new Error('No downloadable assets found in release')
+    }
+
+    for (const { asset, key } of filesToUpdate) {
+      const progressBase = (filesDone / filesToUpdate.length) * 100
+      const progressRange = 100 / filesToUpdate.length
+
+      const data = await httpsDownload(asset.browser_download_url, (downloaded, total) => {
+        updateState.progress = Math.round(progressBase + (downloaded / total) * progressRange)
+        notifyUpdateState()
+      })
+
+      // Verify SHA256 if available
+      if (expectedAssets[key]?.sha256) {
+        const hash = crypto.createHash('sha256').update(data).digest('hex')
+        if (hash !== expectedAssets[key].sha256) {
+          throw new Error(`SHA256 mismatch for ${key}`)
+        }
+      }
+
+      const dest = path.join(resourcesPath, key)
+      fs.writeFileSync(dest, data)
+      filesDone++
+    }
+
+    updateState = { ...updateState, downloading: false, progress: 100 }
+    notifyUpdateState()
+
+    return { ok: true, version: manifest.version, needRestart: !!asarAsset }
+  } catch (e) {
+    updateState = { ...updateState, downloading: false, error: e.message || String(e) }
+    notifyUpdateState()
+    return { error: true, message: e.message || String(e) }
+  }
+}
+
+function restartApp() {
+  app.relaunch()
+  isQuitting = true
+  app.quit()
 }
 
 // ─── Launch Claude Code ─────────────────────────────────────────────
@@ -1013,6 +1272,27 @@ function updateTrayMenu() {
     })
   }
 
+  // Update check item
+  if (updateState.available && updateState.latestVersion) {
+    menuItems.push(
+      { type: 'separator' },
+      {
+        label: mt('update.newVersion').replace('{v}', updateState.latestVersion),
+        click: () => {
+          if (updateState.releaseUrl) shell.openExternal(updateState.releaseUrl)
+        },
+      },
+    )
+  } else {
+    menuItems.push(
+      { type: 'separator' },
+      {
+        label: mt('update.check'),
+        click: () => checkForUpdates(),
+      },
+    )
+  }
+
   menuItems.push(
     { type: 'separator' },
     {
@@ -1249,6 +1529,15 @@ ipcMain.handle('copilot-proxy:invoke', async (_event, request) => {
       return clearClaudeEnv()
     case 'check_claude_env':
       return checkClaudeEnv()
+    case 'check_update':
+      return checkForUpdates()
+    case 'apply_update':
+      return applyLightweightUpdate()
+    case 'restart_app':
+      setTimeout(() => restartApp(), 200)
+      return { ok: true }
+    case 'get_update_state':
+      return { ...updateState }
     case 'check_claude_installed': {
       // Check if 'claude' CLI is available
       // Strategy: use an interactive login shell to resolve the real PATH
@@ -1347,6 +1636,11 @@ if (!gotLock) {
 if (gotLock) app.whenReady().then(() => {
   createTray()
   createWindow()
+
+  // Auto-check for updates 10s after launch
+  setTimeout(() => {
+    checkForUpdates().catch(e => console.warn('Auto update check failed:', e))
+  }, 10000)
 
   app.on('activate', () => {
     if (mainWin) {

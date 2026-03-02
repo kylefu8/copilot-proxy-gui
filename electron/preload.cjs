@@ -32,4 +32,9 @@ contextBridge.exposeInMainWorld('copilotProxyDesktop', {
     ipcRenderer.on('copilot-proxy:trigger-start', listener)
     return () => ipcRenderer.removeListener('copilot-proxy:trigger-start', listener)
   },
+  onUpdateState(callback) {
+    const listener = (_event, state) => callback(state)
+    ipcRenderer.on('copilot-proxy:update-state', listener)
+    return () => ipcRenderer.removeListener('copilot-proxy:update-state', listener)
+  },
 })
