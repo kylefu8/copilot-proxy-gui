@@ -389,12 +389,27 @@ function serviceStart(payload) {
   serviceLogs = []
 
   if (isPackaged) {
-    // Check for bundled standalone proxy exe first (full build)
-    const proxyName = process.platform === 'win32' ? 'copilot-proxy-server.exe' : 'copilot-proxy-server'
-    const proxyExe = path.join(process.resourcesPath, proxyName)
-    if (fs.existsSync(proxyExe)) {
+    // Prefer JS bundle (lightweight) over legacy bun-compiled binary
+    const bundlePath = path.join(process.resourcesPath, 'copilot-proxy-bundle.mjs')
+    const legacyBinaryName = process.platform === 'win32' ? 'copilot-proxy-server.exe' : 'copilot-proxy-server'
+    const legacyBinaryPath = path.join(process.resourcesPath, legacyBinaryName)
+
+    if (fs.existsSync(bundlePath)) {
+      // New approach: run JS bundle with Electron's built-in Node.js
       serviceChild = spawn(
-        proxyExe,
+        process.execPath,
+        [bundlePath, ...args],
+        {
+          stdio: ['ignore', 'pipe', 'pipe'],
+          windowsHide: true,
+          shell: false,
+          env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+        },
+      )
+    } else if (fs.existsSync(legacyBinaryPath)) {
+      // Fallback: legacy bun-compiled binary
+      serviceChild = spawn(
+        legacyBinaryPath,
         args,
         {
           stdio: ['ignore', 'pipe', 'pipe'],
@@ -403,24 +418,42 @@ function serviceStart(payload) {
         },
       )
     } else {
-      throw new Error('Bundled proxy server not found at: ' + proxyExe + '\nPlease rebuild with: npm run desktop:build')
+      throw new Error('Proxy server not found. Looked for:\n  ' + bundlePath + '\n  ' + legacyBinaryPath + '\nPlease rebuild with: npm run desktop:build')
     }
   } else {
-    // Dev mode: use bun to run source
-    const bunInfo = resolveBunExecutable()
-    if (!bunInfo) {
-      throw new Error('bun not found in PATH or ~/.bun/bin')
+    // Dev mode: run JS bundle or source with Node.js / bun
+    const devBundlePath = path.join(__dirname, '..', 'build', 'copilot-proxy-bundle.mjs')
+    if (fs.existsSync(devBundlePath)) {
+      // Use pre-built JS bundle with Node.js
+      serviceChild = spawn(
+        process.execPath,
+        [devBundlePath, ...args],
+        {
+          stdio: ['ignore', 'pipe', 'pipe'],
+          windowsHide: true,
+          shell: false,
+          env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+        },
+      )
+    } else if (repoRoot) {
+      // Fallback: use bun to run source
+      const bunInfo = resolveBunExecutable()
+      if (!bunInfo) {
+        throw new Error('Neither build/copilot-proxy-bundle.mjs nor bun found.\nRun: node scripts/bundle-proxy.cjs')
+      }
+      serviceChild = spawn(
+        bunInfo.bin,
+        ['run', 'src/main.ts', ...args],
+        {
+          cwd: repoRoot,
+          stdio: ['ignore', 'pipe', 'pipe'],
+          windowsHide: true,
+          shell: false,
+        },
+      )
+    } else {
+      throw new Error('Proxy server not found. Run: node scripts/bundle-proxy.cjs')
     }
-    serviceChild = spawn(
-      bunInfo.bin,
-      ['run', 'src/main.ts', ...args],
-      {
-        cwd: repoRoot,
-        stdio: ['ignore', 'pipe', 'pipe'],
-        windowsHide: true,
-        shell: false,
-      },
-    )
   }
 
   function pushLog(line) {

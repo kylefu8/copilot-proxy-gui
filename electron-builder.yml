@@ -12,23 +12,22 @@ files:
   - dist/**/*
   - "!node_modules"
 
+# Extra resources shared by all platforms (JS bundle – cross-platform)
+extraResources:
+  - from: build/copilot-proxy-bundle.mjs
+    to: copilot-proxy-bundle.mjs
+
 win:
   target:
     - target: portable
       arch: [x64]
   icon: build/icon.ico
-  extraResources:
-    - from: build/copilot-proxy-server.exe
-      to: copilot-proxy-server.exe
 
 mac:
   target: dmg
   icon: build/icon.icns
   category: public.app-category.developer-tools
   identity: null
-  extraResources:
-    - from: build/copilot-proxy-server
-      to: copilot-proxy-server
 
 afterPack: scripts/afterPack.cjs
 

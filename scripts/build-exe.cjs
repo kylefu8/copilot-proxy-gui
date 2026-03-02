@@ -4,12 +4,12 @@
  * Steps:
  *   0. Generate icon files              → build/icon.png, build/icon.ico
  *   1. Build the Vite frontend          → dist/
- *   2. Compile the proxy server via bun → build/copilot-proxy-server[.exe]
+ *   2. Bundle the proxy server via esbuild → build/copilot-proxy-bundle.mjs
  *   3. Package with electron-builder    → release/
  *
  * Prerequisites:
  *   - copilot-proxy/ submodule must be initialized
- *   - bun must be installed
+ *   - esbuild must be installed (devDependency)
  *
  * Supported platforms: Windows (win32), macOS (darwin)
  *
@@ -34,26 +34,8 @@ if (!isWin && !isMac) {
   process.exit(1)
 }
 
-const bunTarget = isWin
-  ? 'bun-windows-x64'
-  : `bun-darwin-${process.arch === 'arm64' ? 'arm64' : 'x64'}`
-
-const proxyBinaryName = isWin ? 'copilot-proxy-server.exe' : 'copilot-proxy-server'
-const proxyOutPath = path.join(buildDir, proxyBinaryName)
 const electronBuilderFlag = isWin ? '--win' : '--mac'
-
-// Locate the proxy server source:
-//   1. copilot-proxy/ submodule (standalone repo)
-//   2. ../../ (apps/gui inside monorepo)
-function findRepoRoot() {
-  const submodule = path.resolve(guiDir, 'copilot-proxy')
-  if (fs.existsSync(path.join(submodule, 'src', 'main.ts'))) return submodule
-  const mono = path.resolve(guiDir, '..', '..')
-  if (fs.existsSync(path.join(mono, 'src', 'main.ts'))) return mono
-  console.error('ERROR: Cannot find proxy source (src/main.ts). Expected at copilot-proxy/ or ../../')
-  process.exit(1)
-}
-const repoRoot = findRepoRoot()
+const proxyBundlePath = path.join(buildDir, 'copilot-proxy-bundle.mjs')
 
 // Ensure COMSPEC is set on Windows (can be lost in some environments)
 if (!process.env.COMSPEC && isWin) {
@@ -83,52 +65,32 @@ console.log('\n═══ Step 1: Building frontend (vite) ═══')
 
 run('npx vite build', { cwd: guiDir })
 
-// ── 2. Compile proxy server as standalone exe ───────────────────────
+// ── 2. Bundle proxy server as JS (replaces bun --compile) ────────────
+
+console.log('\n═══ Step 2: Bundling proxy server (esbuild → JS bundle) ═══')
+
+run('node scripts/bundle-proxy.cjs', { cwd: guiDir })
+
+if (!fs.existsSync(proxyBundlePath)) {
+  console.error('ERROR: Proxy bundle was not created!')
+  process.exit(1)
+}
+
+const sizeMB = (fs.statSync(proxyBundlePath).size / 1024 / 1024).toFixed(1)
+console.log(`  → ${proxyBundlePath} (${sizeMB} MB)`)
+
 // ── 3. Package with electron-builder ────────────────────────────────
 
+console.log('\n═══ Step 3: Packaging with electron-builder ═══')
+
 if (isMac) {
-  // macOS: build separately for each architecture to ensure correct proxy binary
+  // macOS: build for each architecture (same JS bundle works for both)
   const archs = ['arm64', 'x64']
   for (const arch of archs) {
-    const target = `bun-darwin-${arch}`
-    console.log(`\n═══ Step 2+3 [${arch}]: Compile proxy & package ═══`)
-    console.log(`  Target: ${target}`)
-
-    run(
-      `bun build --compile --target=${target} src/main.ts --outfile "${proxyOutPath}"`,
-      { cwd: repoRoot },
-    )
-
-    if (!fs.existsSync(proxyOutPath)) {
-      console.error(`ERROR: Proxy binary was not created for ${arch}!`)
-      process.exit(1)
-    }
-
-    const sizeMB = (fs.statSync(proxyOutPath).size / 1024 / 1024).toFixed(1)
-    console.log(`  → ${proxyOutPath} (${sizeMB} MB)`)
-
     console.log(`\n  Packaging ${arch} DMG...`)
     run(`npx electron-builder --mac --${arch} --config electron-builder.yml`, { cwd: guiDir })
   }
 } else {
-  // Windows: single architecture build
-  console.log('\n═══ Step 2: Compiling proxy server (bun build --compile) ═══')
-  console.log(`  Platform: ${process.platform}, Arch: ${process.arch}, Target: ${bunTarget}`)
-
-  run(
-    `bun build --compile --target=${bunTarget} src/main.ts --outfile "${proxyOutPath}"`,
-    { cwd: repoRoot },
-  )
-
-  if (!fs.existsSync(proxyOutPath)) {
-    console.error('ERROR: Proxy binary was not created!')
-    process.exit(1)
-  }
-
-  const sizeMB = (fs.statSync(proxyOutPath).size / 1024 / 1024).toFixed(1)
-  console.log(`  → ${proxyOutPath} (${sizeMB} MB)`)
-
-  console.log('\n═══ Step 3: Packaging with electron-builder ═══')
   run(`npx electron-builder ${electronBuilderFlag} --config electron-builder.yml`, { cwd: guiDir })
 }
 
