@@ -1,4 +1,5 @@
 ﻿const fs = require('node:fs')
+const originalFs = require('original-fs') // bypass Electron's ASAR interception
 const os = require('node:os')
 const path = require('node:path')
 const https = require('node:https')
@@ -713,6 +714,12 @@ async function applyLightweightUpdate() {
       throw new Error('No downloadable assets found in release')
     }
 
+    // Download all files to a temp directory first
+    const tempDir = path.join(app.getPath('temp'), 'copilot-proxy-update')
+    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true })
+
+    const downloadedFiles = []
+
     for (const { asset, key } of filesToUpdate) {
       const progressBase = (filesDone / filesToUpdate.length) * 100
       const progressRange = 100 / filesToUpdate.length
@@ -730,10 +737,30 @@ async function applyLightweightUpdate() {
         }
       }
 
-      const dest = path.join(resourcesPath, key)
-      fs.writeFileSync(dest, data)
+      const tempFile = path.join(tempDir, key)
+      fs.writeFileSync(tempFile, data)
+      downloadedFiles.push({ tempFile, destFile: path.join(resourcesPath, key), key })
       filesDone++
     }
+
+    // Copy files from temp to resources using original-fs (bypasses ASAR interception)
+    for (const { tempFile, destFile, key } of downloadedFiles) {
+      try {
+        originalFs.copyFileSync(tempFile, destFile)
+      } catch (copyErr) {
+        // On macOS, /Applications may need elevated permissions
+        if (process.platform === 'darwin' && (copyErr.code === 'EACCES' || copyErr.code === 'EPERM')) {
+          // Use cp command with shell as fallback
+          const { execSync } = require('node:child_process')
+          execSync(`cp "${tempFile}" "${destFile}"`)
+        } else {
+          throw copyErr
+        }
+      }
+    }
+
+    // Clean up temp files
+    try { fs.rmSync(tempDir, { recursive: true, force: true }) } catch { /* ignore */ }
 
     updateState = { ...updateState, downloading: false, progress: 100 }
     notifyUpdateState()
