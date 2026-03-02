@@ -21,6 +21,8 @@ win:
   target:
     - target: portable
       arch: [x64]
+    - target: dir
+      arch: [x64]
   icon: build/icon.ico
 
 mac:
