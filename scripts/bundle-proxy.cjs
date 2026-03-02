@@ -34,14 +34,16 @@ async function main() {
     minify: false,
     // Resolve modules from copilot-proxy's node_modules
     nodePaths: [path.join(proxyDir, 'node_modules')],
-    // clipboardy uses native bindings; keep it external
-    // undici is built into Node.js 18+ and has CJS/ESM interop issues when bundled
-    external: ['clipboardy', 'undici'],
+    // undici is built into Node.js 18+ and ships with the runtime
+    external: ['undici'],
     // Handle the ~ path alias used in copilot-proxy
     alias: {
       '~': path.join(proxyDir, 'src'),
     },
-    // No shebang banner needed – ESM files don't support it inline
+    // Create a require function for CJS modules bundled into ESM (e.g. clipboardy → run-jxa → execa)
+    banner: {
+      js: `import { createRequire as __createRequire } from 'module'; const require = __createRequire(import.meta.url);`,
+    },
     logLevel: 'info',
   })
 
