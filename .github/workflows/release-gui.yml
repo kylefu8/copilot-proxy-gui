@@ -57,11 +57,41 @@ jobs:
       - name: Package with electron-builder
         run: npx electron-builder --win --config electron-builder.yml
 
+      - name: Generate update manifest
+        run: |
+          node -e "
+            const fs = require('fs');
+            const path = require('path');
+            const crypto = require('crypto');
+            const sha256 = f => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
+            const asarPath = path.join('release', 'win-unpacked', 'resources', 'app.asar');
+            const bundlePath = path.join('build', 'copilot-proxy-bundle.mjs');
+            if (!fs.existsSync(asarPath) || !fs.existsSync(bundlePath)) { console.error('Missing assets'); process.exit(1); }
+            const pkg = require('./package.json');
+            const ePkg = require('./node_modules/electron/package.json');
+            const manifest = {
+              version: pkg.version,
+              minElectronVersion: ePkg.version.split('.')[0] + '.0.0',
+              assets: {
+                'app.asar': { size: fs.statSync(asarPath).size, sha256: sha256(asarPath) },
+                'copilot-proxy-bundle.mjs': { size: fs.statSync(bundlePath).size, sha256: sha256(bundlePath) },
+              },
+            };
+            fs.writeFileSync('release/update-manifest.json', JSON.stringify(manifest, null, 2));
+            fs.copyFileSync(asarPath, 'release/app.asar');
+            fs.copyFileSync(bundlePath, 'release/copilot-proxy-bundle.mjs');
+            console.log(JSON.stringify(manifest, null, 2));
+          "
+
       - name: Upload to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: release/*.exe
+          files: |
+            release/*.exe
+            release/update-manifest.json
+            release/app.asar
+            release/copilot-proxy-bundle.mjs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

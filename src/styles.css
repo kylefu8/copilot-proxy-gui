@@ -966,3 +966,122 @@ pre {
   opacity: 0.6;
   margin: 2px 0 0;
 }
+
+/* ─── Update Section ────────────────────────────────── */
+
+.update-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.update-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--text);
+  padding: 6px 0;
+}
+
+.update-info.update-success {
+  color: var(--accent);
+}
+
+.update-info.update-error-text {
+  color: #ef4444;
+  font-size: 0.82rem;
+  word-break: break-word;
+}
+
+.update-spinner {
+  animation: update-pulse 1.2s infinite;
+}
+
+@keyframes update-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.update-hint {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin: 2px 0;
+}
+
+.update-pct {
+  margin-left: auto;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.update-recheck-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--text-dim);
+  transition: color 0.15s;
+}
+
+.update-recheck-btn:hover {
+  color: var(--accent);
+}
+
+.update-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.update-action-btn:hover {
+  border-color: var(--accent-border);
+  background: var(--surface);
+}
+
+.update-action-btn.update-action-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.update-action-btn.update-action-primary:hover {
+  opacity: 0.9;
+}
+
+.update-progress-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.update-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+.update-available,
+.update-downloading,
+.update-ready,
+.update-error-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
