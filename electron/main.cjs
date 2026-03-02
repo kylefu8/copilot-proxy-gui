@@ -738,7 +738,12 @@ async function applyLightweightUpdate() {
       }
 
       const tempFile = path.join(tempDir, key)
-      fs.writeFileSync(tempFile, data)
+      // Use originalFs for .asar files to bypass Electron's ASAR interception
+      if (key.endsWith('.asar')) {
+        originalFs.writeFileSync(tempFile, data)
+      } else {
+        fs.writeFileSync(tempFile, data)
+      }
       downloadedFiles.push({ tempFile, destFile: path.join(resourcesPath, key), key })
       filesDone++
     }
@@ -759,8 +764,8 @@ async function applyLightweightUpdate() {
       }
     }
 
-    // Clean up temp files
-    try { fs.rmSync(tempDir, { recursive: true, force: true }) } catch { /* ignore */ }
+    // Clean up temp files using originalFs.rmSync for .asar compatibility
+    try { originalFs.rmSync(tempDir, { recursive: true, force: true }) } catch { /* ignore */ }
 
     updateState = { ...updateState, downloading: false, progress: 100 }
     notifyUpdateState()
