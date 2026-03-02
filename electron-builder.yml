@@ -19,11 +19,19 @@ extraResources:
 
 win:
   target:
+    - target: nsis
+      arch: [x64]
     - target: portable
       arch: [x64]
     - target: dir
       arch: [x64]
   icon: build/icon.ico
+
+nsis:
+  oneClick: true
+  perMachine: false
+  allowToChangeInstallationDirectory: false
+  artifactName: "${productName}-${version}-setup.exe"
 
 mac:
   target: dmg

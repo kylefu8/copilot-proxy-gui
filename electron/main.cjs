@@ -642,7 +642,17 @@ async function checkForUpdates() {
         manifestData = JSON.parse(mBuf.toString('utf8'))
         const electronVersion = process.versions.electron
         if (!manifestData.minElectronVersion || compareVersions(electronVersion, manifestData.minElectronVersion) >= 0) {
-          lightweightPossible = true
+          // Portable exe extracts to a temp dir each launch — lightweight update
+          // would be overwritten on next start. Only allow for installed apps.
+          const isPortable = process.platform === 'win32' && (
+            process.resourcesPath.includes(path.join('AppData', 'Local', 'Temp')) ||
+            !process.resourcesPath.includes(path.join('AppData', 'Local', 'Programs'))
+          )
+          if (isPortable) {
+            console.log('Portable mode detected — lightweight update disabled')
+          } else {
+            lightweightPossible = true
+          }
         }
       } catch (e) {
         console.warn('Failed to fetch update manifest:', e)
