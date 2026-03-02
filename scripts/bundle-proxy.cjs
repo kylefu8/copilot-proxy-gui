@@ -34,8 +34,9 @@ async function main() {
     minify: false,
     // Resolve modules from copilot-proxy's node_modules
     nodePaths: [path.join(proxyDir, 'node_modules')],
-    // undici is built into Node.js 18+ and ships with the runtime
-    external: ['undici'],
+    // No external packages – everything must be bundled into the single file
+    // because the portable exe has no node_modules at runtime
+    external: [],
     // Handle the ~ path alias used in copilot-proxy
     alias: {
       '~': path.join(proxyDir, 'src'),
