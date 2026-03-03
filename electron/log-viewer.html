@@ -189,6 +189,8 @@
       logContainer.scrollTop = logContainer.scrollHeight
     }
 
+    const MAX_DOM_LINES = 500
+
     function applyFilter() {
       const spans = logContainer.querySelectorAll('.log-line')
       spans.forEach(span => {
@@ -200,23 +202,74 @@
       })
     }
 
+    function createLogSpan(line) {
+      const span = document.createElement('span')
+      span.className = 'log-line'
+      span.textContent = line + '\n'
+      if (filterText && !line.toLowerCase().includes(filterText)) {
+        span.classList.add('filtered')
+      }
+      return span
+    }
+
+    function trimDom() {
+      const nodes = logContainer.querySelectorAll('.log-line')
+      const excess = nodes.length - MAX_DOM_LINES
+      if (excess > 0) {
+        for (let i = 0; i < excess; i++) {
+          nodes[i].remove()
+        }
+      }
+    }
+
+    // Batched append: collect lines and flush once per frame
+    let pendingLines = []
+    let flushScheduled = false
+
+    function scheduleFlush() {
+      if (!flushScheduled) {
+        flushScheduled = true
+        requestAnimationFrame(flushPendingLines)
+      }
+    }
+
+    function flushPendingLines() {
+      flushScheduled = false
+      if (pendingLines.length === 0) return
+
+      // Remove hint if present
+      const hint = document.getElementById('hintText')
+      if (hint) hint.remove()
+
+      const fragment = document.createDocumentFragment()
+      for (const line of pendingLines) {
+        fragment.appendChild(createLogSpan(line))
+      }
+      logContainer.appendChild(fragment)
+      pendingLines = []
+
+      trimDom()
+
+      // Update line count from actual DOM
+      const count = logContainer.querySelectorAll('.log-line').length
+      lineCountEl.textContent = count + ' lines'
+
+      if (follow) {
+        scrollToBottom()
+      }
+    }
+
     function renderLines() {
       if (allLines.length === 0) {
-        logContainer.innerHTML = '<div class="hint">Waiting for logs...</div>'
+        logContainer.innerHTML = '<div class="hint" id="hintText">Waiting for logs...</div>'
         lineCountEl.textContent = '0 lines'
         return
       }
 
-      // Build DOM efficiently
+      // Build DOM efficiently (only used for initial bulk load and clear)
       const fragment = document.createDocumentFragment()
       for (const line of allLines) {
-        const span = document.createElement('span')
-        span.className = 'log-line'
-        span.textContent = line + '\n'
-        if (filterText && !line.toLowerCase().includes(filterText)) {
-          span.classList.add('filtered')
-        }
-        fragment.appendChild(span)
+        fragment.appendChild(createLogSpan(line))
       }
       logContainer.innerHTML = ''
       logContainer.appendChild(fragment)
@@ -229,9 +282,21 @@
 
     // Listen for log updates from main process
     if (window.logViewerAPI) {
+      // Initial bulk load (when window first opens)
       window.logViewerAPI.onLogUpdate((lines) => {
-        allLines = lines
+        allLines = lines.slice()
         renderLines()
+        statusText.textContent = 'Connected'
+      })
+
+      // Incremental single-line updates (real-time)
+      window.logViewerAPI.onLogLine((line) => {
+        allLines.push(line)
+        if (allLines.length > MAX_DOM_LINES) {
+          allLines = allLines.slice(-MAX_DOM_LINES)
+        }
+        pendingLines.push(line)
+        scheduleFlush()
         statusText.textContent = 'Connected'
       })
 

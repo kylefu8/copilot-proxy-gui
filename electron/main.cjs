@@ -487,9 +487,9 @@ function serviceStart(payload) {
     if (serviceLogs.length > MAX_LOG_LINES) {
       serviceLogs = serviceLogs.slice(-MAX_LOG_LINES)
     }
-    // Push to log viewer window in real-time
+    // Push only the new line to log viewer (incremental)
     if (logWin && !logWin.isDestroyed()) {
-      logWin.webContents.send('copilot-proxy:log-update', serviceLogs)
+      logWin.webContents.send('copilot-proxy:log-line', stamped)
     }
   }
 

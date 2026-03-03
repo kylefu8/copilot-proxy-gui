@@ -6,6 +6,11 @@ contextBridge.exposeInMainWorld('logViewerAPI', {
     ipcRenderer.on('copilot-proxy:log-update', listener)
     return () => ipcRenderer.removeListener('copilot-proxy:log-update', listener)
   },
+  onLogLine(callback) {
+    const listener = (_event, line) => callback(line)
+    ipcRenderer.on('copilot-proxy:log-line', listener)
+    return () => ipcRenderer.removeListener('copilot-proxy:log-line', listener)
+  },
   onThemeUpdate(callback) {
     const listener = (_event, theme) => callback(theme)
     ipcRenderer.on('copilot-proxy:theme-update', listener)
