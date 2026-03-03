@@ -1653,7 +1653,8 @@ ipcMain.handle('copilot-proxy:invoke', async (_event, request) => {
 })
 
 // ─── Single instance lock ────────────────────────────────────────────
-const gotLock = app.requestSingleInstanceLock()
+const isDev = !!process.env.COPILOT_GUI_DEV
+const gotLock = isDev || app.requestSingleInstanceLock()
 if (!gotLock) {
   app.whenReady().then(() => {
     dialog.showMessageBoxSync({
