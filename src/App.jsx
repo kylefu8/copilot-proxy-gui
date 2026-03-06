@@ -15,9 +15,11 @@ import {
   getServiceState,
   markServiceRunning,
   markServiceStopped,
+  checkClaudeEnv,
   startDeviceCodeAuth,
   startService,
   stopService,
+  writeClaudeEnv,
 } from './core/service-manager'
 
 function AppInner() {
@@ -42,6 +44,7 @@ function AppInner() {
   const pendingStartRef = useRef(false)
   const triggerStartRef = useRef(() => {})
   const configRef = useRef(config)
+  const hasInitializedClaudeSyncRef = useRef(false)
 
   // Toast notification
   const [toast, setToast] = useState('')
@@ -61,6 +64,35 @@ function AppInner() {
 
   // Keep configRef in sync so event listeners always see latest config
   useEffect(() => { configRef.current = config }, [config])
+
+  // If Claude Code persistent config already exists, keep it in sync with
+  // the current GUI config whenever model-related settings change.
+  useEffect(() => {
+    if (!hasInitializedClaudeSyncRef.current) {
+      hasInitializedClaudeSyncRef.current = true
+      return
+    }
+
+    let cancelled = false
+
+    async function syncClaudePersistentConfig() {
+      try {
+        const status = await checkClaudeEnv()
+        if (!status?.written || cancelled) return
+
+        await writeClaudeEnv(config.port, config.defaultModel, config.defaultSmallModel)
+      }
+      catch (e) {
+        console.warn('Claude config auto-sync failed:', e)
+      }
+    }
+
+    syncClaudePersistentConfig()
+
+    return () => {
+      cancelled = true
+    }
+  }, [config.port, config.defaultModel, config.defaultSmallModel])
 
   // Listen for close-requested from main process (tray close confirmation)
   useEffect(() => {

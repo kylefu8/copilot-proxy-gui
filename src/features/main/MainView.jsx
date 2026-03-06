@@ -157,7 +157,7 @@ export function MainView({
               {lang === 'zh' ? 'EN' : '中'}
             </button>
             <button type="button" className="icon-btn" onClick={onOpenSettings} title={t('header.settings')}>
-              ⚙
+              ⚙️
             </button>
             <button type="button" className="icon-btn" onClick={() => openLogWindow(config.theme)} title={t('logs.openWindow')}>
               📋
@@ -240,6 +240,20 @@ export function MainView({
             <div className="row gap-8" style={{ marginTop: 4 }}>
               <button
                 type="button"
+                disabled={modelsLoading}
+                onClick={async () => {
+                  try {
+                    await onFetchModels()
+                  } catch (err) {
+                    showToast((modelsError?.key === 'tokenExpired' ? t('model.tokenExpired') : t('model.fetchError')) + (err?.message || String(err) || ''))
+                  }
+                }}
+                title={t('refresh')}
+              >
+                {modelsLoading ? t('refreshing') : `🔄 ${t('refresh')}`}
+              </button>
+              <button
+                type="button"
                 disabled={claudeLaunching || claudeInstalled === false}
                 onClick={async () => {
                   setClaudeLaunching(true)
@@ -308,8 +322,8 @@ export function MainView({
           </summary>
           <div className="collapse-body">
             <div className="row usage-toolbar" style={{ marginBottom: 4 }}>
-              <button type="button" onClick={refreshUsage} disabled={usageLoading || !isRunning}>
-                {usageLoading ? t('refreshing') : t('refresh')}
+              <button type="button" onClick={refreshUsage} disabled={usageLoading || !isRunning} title={t('usage.refresh')}>
+                {usageLoading ? t('usage.refreshing') : `📊 ${t('usage.refresh')}`}
               </button>
               {!isRunning && <span className="hint">{t('usage.needService')}</span>}
               {usage && (() => {

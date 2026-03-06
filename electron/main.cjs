@@ -199,6 +199,20 @@ let serviceLogs = []
 let lastServicePayload = null   // remembered for tray "Start" action
 let lastModelName = ''          // model name shown in tray tooltip
 
+function pushLog(line) {
+  // Prepend timestamp if the line doesn't already have one
+  const ts = new Date().toISOString().replace('T', ' ').slice(0, 23)
+  const stamped = line.startsWith('[2') ? line : `[${ts}] ${line}`
+  serviceLogs.push(stamped)
+  if (serviceLogs.length > MAX_LOG_LINES) {
+    serviceLogs = serviceLogs.slice(-MAX_LOG_LINES)
+  }
+  // Push only the new line to log viewer (incremental)
+  if (logWin && !logWin.isDestroyed()) {
+    logWin.webContents.send('copilot-proxy:log-line', stamped)
+  }
+}
+
 // ─── Update state ────────────────────────────────────────────────────
 let updateState = {
   checking: false,
@@ -476,20 +490,6 @@ function serviceStart(payload) {
       )
     } else {
       throw new Error('Proxy server not found. Run: node scripts/bundle-proxy.cjs')
-    }
-  }
-
-  function pushLog(line) {
-    // Prepend timestamp if the line doesn't already have one
-    const ts = new Date().toISOString().replace('T', ' ').slice(0, 23)
-    const stamped = line.startsWith('[2') ? line : `[${ts}] ${line}`
-    serviceLogs.push(stamped)
-    if (serviceLogs.length > MAX_LOG_LINES) {
-      serviceLogs = serviceLogs.slice(-MAX_LOG_LINES)
-    }
-    // Push only the new line to log viewer (incremental)
-    if (logWin && !logWin.isDestroyed()) {
-      logWin.webContents.send('copilot-proxy:log-line', stamped)
     }
   }
 
@@ -993,9 +993,12 @@ async function detectAccountType() {
 async function fetchModels(payload) {
   const accountType = payload?.accountType || 'individual'
 
+  pushLog(`[models] Refreshing model list (accountType=${accountType})`)
+
   // 1. Read GitHub token
   const githubToken = readToken()
   if (!githubToken) {
+    pushLog('[models] Refresh failed: GitHub token not found')
     throw new Error(mt('err.loginFirst'))
   }
 
@@ -1009,6 +1012,7 @@ async function fetchModels(payload) {
   })
 
   if (!tokenRes.ok) {
+    pushLog(`[models] Refresh failed: unable to get Copilot token (${tokenRes.status})`)
     throw new Error(`${mt('err.copilotToken')}${tokenRes.status}`)
   }
 
@@ -1029,8 +1033,12 @@ async function fetchModels(payload) {
   }, 10000)
 
   if (!modelsRes.ok) {
+    pushLog(`[models] Refresh failed: model list request returned ${modelsRes.status}`)
     throw new Error(`${mt('err.modelList')}${modelsRes.status}`)
   }
+
+  const count = Array.isArray(modelsRes.json?.data) ? modelsRes.json.data.length : 0
+  pushLog(`[models] Refreshed model list successfully (${count} models)`)
 
   return modelsRes.json
 }

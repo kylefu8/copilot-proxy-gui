@@ -78,6 +78,8 @@ const translations = {
 
     // ── Usage ─────────────────────────────────────
     'usage.title': '📊 用量',
+    'usage.refresh': '刷新用量',
+    'usage.refreshing': '刷新用量中...',
     'usage.needService': '需先启动代理',
     'usage.plan': '计划',
     'usage.reset': '重置',
@@ -260,6 +262,8 @@ const translations = {
 
     // ── Usage ─────────────────────────────────────
     'usage.title': '📊 Usage',
+    'usage.refresh': 'Refresh Usage',
+    'usage.refreshing': 'Refreshing Usage...',
     'usage.needService': 'Start proxy first',
     'usage.plan': 'Plan',
     'usage.reset': 'Reset',

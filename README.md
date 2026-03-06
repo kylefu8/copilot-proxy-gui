@@ -28,8 +28,8 @@
 - GitHub OAuth 登录（Device Code 流程，内置验证码弹窗）
 - 自动检测账号类型（个人 / 商业 / 企业）
 - 服务启停，独立日志弹窗窗口（过滤、跟踪/暂停、可调字号、自动换行、主题同步）
-- 模型列表拉取 & 默认模型 / 快速模型选择（选择即保存）
-- Claude Code 集成：一键启动 & 写入/清除 `~/.claude/settings.json` 配置
+- 模型列表拉取 & 默认模型 / 快速模型选择（选择即保存，主界面支持一键刷新模型列表）
+- Claude Code 集成：一键启动 & 写入/清除 `~/.claude/settings.json` 配置；若已存在持久化配置，切换模型后自动同步
 - 用量看板（配额进度条 + 详细数据折叠展示）
 - 风险声明对话框（首次启动弹出，需接受后方可启动服务）
 - 5 套内置主题：Lavender (Frost)、Peach (Sakura)、Cherry、Midnight、Aurora
@@ -46,7 +46,7 @@
 
 从 [Releases](https://github.com/kylefu8/copilot-proxy-gui/releases) 页面下载：
 
-- **Windows**：便携版（`.exe`），双击即用，无需安装
+- **Windows**：安装版（`-setup.exe`，推荐，支持轻量更新）或便携版（`-portable.exe`）
 - **macOS**：DMG 安装包（arm64 适用于 Apple Silicon，x64 适用于 Intel）
 
 > **macOS 首次打开提示**
@@ -98,7 +98,7 @@ GUI 默认请求本地 `http://localhost:4399`，可在设置页修改端口。
 ### IPC 命令
 
 | 命令 | 说明 |
-|------|------|
+| ---- | ---- |
 | `service_start` | 启动代理服务 |
 | `service_stop` | 停止代理服务 |
 | `service_logs` | 获取服务日志 |
@@ -132,8 +132,8 @@ A desktop GUI for [copilot-proxy](https://github.com/Jer-y/copilot-proxy), built
 - GitHub OAuth login (Device Code flow, built-in verification code popup)
 - Auto-detect account type (individual / business / enterprise)
 - Service start/stop, standalone log viewer popup window (filter, follow/pause, adjustable font size, word wrap, theme sync)
-- Model list fetching & default/fast model selection (saves on select)
-- Claude Code integration: one-click launch & write/clear `~/.claude/settings.json`
+- Model list fetching & default/fast model selection (saves on select, with one-click model refresh on the main screen)
+- Claude Code integration: one-click launch & write/clear `~/.claude/settings.json`; when persistent Claude config already exists, model changes auto-sync
 - Usage dashboard (quota progress bar + collapsible detail view)
 - Risk disclaimer dialog (shown on first launch, must accept before starting)
 - 5 built-in themes: Lavender (Frost), Peach (Sakura), Cherry, Midnight, Aurora
@@ -150,7 +150,7 @@ A desktop GUI for [copilot-proxy](https://github.com/Jer-y/copilot-proxy), built
 
 Download from the [Releases](https://github.com/kylefu8/copilot-proxy-gui/releases) page:
 
-- **Windows**: Portable edition (`.exe`, no installation required)
+- **Windows**: Installer (`-setup.exe`, recommended, supports lightweight updates) or Portable edition (`-portable.exe`)
 - **macOS**: DMG installer (arm64 for Apple Silicon, x64 for Intel)
 
 > **macOS First Launch Note**
@@ -202,7 +202,7 @@ The proxy child process is automatically stopped when the window is closed.
 ### IPC Commands
 
 | Command | Description |
-|---------|-------------|
+| ------- | ----------- |
 | `service_start` | Start proxy |
 | `service_stop` | Stop proxy |
 | `service_logs` | Get logs |
