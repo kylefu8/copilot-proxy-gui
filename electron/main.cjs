@@ -1480,7 +1480,7 @@ function createWindow() {
   mainWin.on('closed', () => { mainWin = null })
 
   if (process.env.COPILOT_GUI_DEV === '1') {
-    mainWin.loadURL('http://localhost:5190')
+    mainWin.loadURL(process.env.VITE_DEV_SERVER_URL || 'http://localhost:5190')
     mainWin.webContents.once('did-finish-load', () => {
       if (mainWin) mainWin.setTitle(`Copilot Proxy GUI v${require('../package.json').version}`)
     })
