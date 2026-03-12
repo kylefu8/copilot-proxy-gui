@@ -95,16 +95,9 @@ jobs:
 
       - name: Upload to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            release/*.exe
-            release/update-manifest.json
-            release/app.asar
-            release/copilot-proxy-bundle.mjs
-          fail_on_unmatched_files: false
+        run: gh release upload ${{ github.ref_name }} release/*.exe release/update-manifest.json release/app.asar release/copilot-proxy-bundle.mjs --clobber
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload artifacts (for non-tag builds)
         if: "!startsWith(github.ref, 'refs/tags/')"
@@ -161,12 +154,9 @@ jobs:
 
       - name: Upload to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: release/*.dmg
-          fail_on_unmatched_files: false
+        run: gh release upload ${{ github.ref_name }} release/*.dmg --clobber
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload artifacts (for non-tag builds)
         if: "!startsWith(github.ref, 'refs/tags/')"
