@@ -39,6 +39,7 @@ export function MainView({
   const [themeOpen, setThemeOpen] = useState(false)
   const themeRef = useRef(null)
   const contentRef = useRef(null)
+  const usageAutoRefreshed = useRef(false)
 
   const isRunning = service.status === 'running'
   const modelOptions = models?.data ?? []
@@ -308,7 +309,14 @@ export function MainView({
         <details
           className="collapse-section"
           open={usageOpen}
-          onToggle={e => onToggleUsage(e.target.open)}
+          onToggle={(e) => {
+            const nowOpen = e.target.open
+            onToggleUsage(nowOpen)
+            if (nowOpen && !usageAutoRefreshed.current && isRunning) {
+              usageAutoRefreshed.current = true
+              refreshUsage()
+            }
+          }}
         >
           <summary>
             <span>{t('usage.title')}</span>
