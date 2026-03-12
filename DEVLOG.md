@@ -184,3 +184,24 @@ This release integrates the upstream-merged compatibility fix, adds UX refinemen
 
 - GUI release: `v0.3.0`
 - Embedded proxy: upstream `main` @ `b162b63` (post-`v0.3.1`)
+
+## 2026-03-12 — v0.3.1 hotfix
+
+### Summary
+
+Hotfix for macOS window height regression introduced in v0.3.0 and CI workflow fixes.
+
+### macOS fix
+
+- The `resizeWindow` frame compensation added for Windows also affected macOS, making the window taller than intended
+- Fixed by skipping frame compensation on macOS (`process.platform === 'darwin'`), where `useContentSize: true` already handles it correctly
+
+### CI fixes
+
+- `create-release` job now checks if the release already exists before creating
+- Replaced `softprops/action-gh-release` upload steps with `gh release upload --clobber` to avoid "Finalizing release" failures
+
+### Reference release
+
+- GUI release: `v0.3.1`
+- Embedded proxy: upstream `main` @ `b162b63` (post-`v0.3.1`)

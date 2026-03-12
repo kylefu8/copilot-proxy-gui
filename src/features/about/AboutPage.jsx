@@ -86,7 +86,7 @@ export function AboutPage({ onBack }) {
         </header>
 
         <section className="settings-section">
-          <div className="about-logo"><img src="/icon.png" alt="Copilot Proxy GUI" /></div>
+          <div className="about-logo"><img src="./icon.png" alt="Copilot Proxy GUI" /></div>
           <h2 className="about-title">Copilot Proxy GUI</h2>
           <p className="about-version">v{APP_VERSION}</p>
           <p className="about-desc">

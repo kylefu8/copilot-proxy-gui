@@ -1,5 +1,9 @@
 # What's New / 新功能
 
+## Hotfix / 热修复
+
+• Fix macOS window height regression: skip frame compensation on macOS where `useContentSize` already handles it correctly / 修复 macOS 窗口高度回归：在 macOS 上跳过 frame 补偿，`useContentSize` 已正确处理
+
 ## 🔗 Upstream Sync / 上游同步
 
 • Upstream PR merged: Anthropic `/v1/messages` compatibility fix is now official (`Jer-y/copilot-proxy#2`) / 上游 PR 已合并：Anthropic `/v1/messages` 兼容性修复已正式进入上游
@@ -20,12 +24,12 @@
 
 | Platform | File | Note |
 | -------- | ---- | ---- |
-| Windows (Installer) | Copilot.Proxy.GUI-0.3.0-setup.exe | **Recommended** / 推荐，supports lightweight update / 支持轻量更新 |
-| Windows (Portable) | Copilot.Proxy.GUI-0.3.0-portable.exe | No installation needed / 无需安装，双击即用 |
-| macOS (Apple Silicon) | Copilot.Proxy.GUI-0.3.0-arm64.dmg | M1/M2/M3/M4 Mac |
-| macOS (Intel) | Copilot.Proxy.GUI-0.3.0-x64.dmg | Intel Mac |
+| Windows (Installer) | Copilot.Proxy.GUI-0.3.1-setup.exe | **Recommended** / 推荐，supports lightweight update / 支持轻量更新 |
+| Windows (Portable) | Copilot.Proxy.GUI-0.3.1-portable.exe | No installation needed / 无需安装，双击即用 |
+| macOS (Apple Silicon) | Copilot.Proxy.GUI-0.3.1-arm64.dmg | M1/M2/M3/M4 Mac |
+| macOS (Intel) | Copilot.Proxy.GUI-0.3.1-x64.dmg | Intel Mac |
 
 > macOS first launch / macOS 首次启动: Right-click the app → Open → click "Open" in the dialog. If blocked, go to System Settings → Privacy & Security → click "Open Anyway".
 > 右键点击应用 → 打开 → 在弹窗中点击"打开"。如被阻止，前往系统设置 → 隐私与安全性 → 点击"仍要打开"。
 
-Full Changelog: [v0.2.9...v0.3.0](https://github.com/kylefu8/copilot-proxy-gui/compare/v0.2.9...v0.3.0)
+Full Changelog: [v0.3.0...v0.3.1](https://github.com/kylefu8/copilot-proxy-gui/compare/v0.3.0...v0.3.1)
