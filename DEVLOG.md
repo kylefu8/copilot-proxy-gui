@@ -156,3 +156,31 @@ All three items from the v0.2.9 follow-up list are now resolved:
 1. ✅ `.gitmodules` restored to upstream URL
 2. ✅ Submodule pointed at official upstream merged commit
 3. ✅ Submodule config synced
+
+## 2026-03-12 — v0.3.0 release
+
+### Summary
+
+This release integrates the upstream-merged compatibility fix, adds UX refinements, and fixes Windows window height issues.
+
+### Upstream sync
+
+- Upstream PR `Jer-y/copilot-proxy#2` merged by Jer-y on 2026-03-12
+- `.gitmodules` restored to upstream `Jer-y/copilot-proxy.git`
+- Submodule now points at upstream merge commit `b162b63` (ahead of upstream `v0.3.1`)
+
+### New features
+
+- Auto-refresh usage data on first panel expand after app launch (subsequent expands require manual refresh)
+- About page logo replaced from 🚀 emoji to the actual app icon
+
+### Window height optimization
+
+- Fixed excessive bottom whitespace on Windows: `resizeWindow` now compensates for title bar / border frame dimensions
+- Platform-specific CSS padding: Windows gets `10px`, macOS keeps `30px`
+- Applied to Main view, Settings page, and About page
+
+### Reference release
+
+- GUI release: `v0.3.0`
+- Embedded proxy: upstream `main` @ `b162b63` (post-`v0.3.1`)

@@ -91,8 +91,10 @@ export function SettingsPage({
     onSaveConfig()
   }
 
+  const isWin = /Win/.test(navigator.platform)
+
   return (
-    <div className="settings-page">
+    <div className={`settings-page${isWin ? ' platform-win' : ''}`}>
       <div className="settings-page-inner" ref={contentRef}>
       <header className="settings-header">
         <button type="button" className="back-btn" onClick={onBack}>{t('back')}</button>

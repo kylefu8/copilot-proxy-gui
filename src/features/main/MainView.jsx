@@ -116,8 +116,10 @@ export function MainView({
   const statusColor = serviceBusy ? '#f0a050' : isRunning ? '#6ee7b7' : service.status === 'error' ? '#ff9191' : '#8b99b5'
   const statusLabel = serviceBusy ? (isRunning ? t('status.stopping') : t('status.starting')) : isRunning ? t('status.running') : service.status === 'error' ? t('status.error') : t('status.stopped')
 
+  const isWin = /Win/.test(navigator.platform)
+
   return (
-    <div className="main-layout">
+    <div className={`main-layout${isWin ? ' platform-win' : ''}`}>
       {/* Left: main content */}
       <div className="main-view">
         <div className="main-view-inner" ref={contentRef}>

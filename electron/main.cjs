@@ -1513,9 +1513,14 @@ function resizeWindow(payload) {
   const h = height || cur[1]
 
   // Set size directly without toggling resizable to avoid
-  // Windows Aero Snap interference during window drag
-  win.setMinimumSize(w, h)
-  win.setMaximumSize(w, h)
+  // Windows Aero Snap interference during window drag.
+  // min/max use outer (frame) dimensions, so compensate for title bar / borders.
+  const outer = win.getSize()
+  const inner = win.getContentSize()
+  const frameW = outer[0] - inner[0]
+  const frameH = outer[1] - inner[1]
+  win.setMinimumSize(w + frameW, h + frameH)
+  win.setMaximumSize(w + frameW, h + frameH)
   win.setContentSize(w, h, false)
   // Reset min/max constraints after size is applied
   setTimeout(() => {

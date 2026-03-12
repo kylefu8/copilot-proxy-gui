@@ -75,8 +75,10 @@ export function AboutPage({ onBack }) {
     if (updateData.releaseUrl) openLink(updateData.releaseUrl)
   }, [updateData.releaseUrl])
 
+  const isWin = /Win/.test(navigator.platform)
+
   return (
-    <div className="settings-page">
+    <div className={`settings-page${isWin ? ' platform-win' : ''}`}>
       <div className="settings-page-inner" ref={contentRef}>
         <header className="settings-header">
           <button type="button" className="back-btn" onClick={onBack}>{t('back')}</button>
@@ -84,7 +86,7 @@ export function AboutPage({ onBack }) {
         </header>
 
         <section className="settings-section">
-          <div className="about-logo">🚀</div>
+          <div className="about-logo"><img src="/icon.png" alt="Copilot Proxy GUI" /></div>
           <h2 className="about-title">Copilot Proxy GUI</h2>
           <p className="about-version">v{APP_VERSION}</p>
           <p className="about-desc">

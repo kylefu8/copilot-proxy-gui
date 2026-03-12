@@ -224,6 +224,9 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   align-content: start;
   padding-bottom: 30px;
 }
+.platform-win .main-view-inner {
+  padding-bottom: 10px;
+}
 
 .main-header {
   display: flex;
@@ -469,6 +472,9 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   display: grid;
   gap: 8px;
   padding-bottom: 30px;
+}
+.platform-win .settings-page-inner {
+  padding-bottom: 10px;
 }
 
 .settings-header {
@@ -875,10 +881,13 @@ pre {
 /* ─── About Page ─────────────────────────────────────────────── */
 
 .about-logo {
-  font-size: 3rem;
   text-align: center;
   margin: 8px 0 4px;
   line-height: 1;
+}
+.about-logo img {
+  width: 64px;
+  height: 64px;
 }
 
 .about-title {
