@@ -10,6 +10,9 @@ contextBridge.exposeInMainWorld('conversationAPI', {
   clearAll() {
     return ipcRenderer.invoke('copilot-proxy:invoke', { command: 'clear_conversations' })
   },
+  deleteSessions(sessionIds) {
+    return ipcRenderer.invoke('copilot-proxy:invoke', { command: 'delete_conversation_sessions', payload: { sessionIds } })
+  },
   onNewConversation(callback) {
     const listener = (_event, entry) => callback(entry)
     ipcRenderer.on('copilot-proxy:new-conversation', listener)

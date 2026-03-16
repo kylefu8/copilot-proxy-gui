@@ -1666,6 +1666,9 @@ ipcMain.handle('copilot-proxy:invoke', async (_event, request) => {
     case 'clear_conversations':
       conversationStore.clearAll()
       return { ok: true }
+    case 'delete_conversation_sessions':
+      conversationStore.deleteSessions(payload?.sessionIds || [])
+      return { ok: true }
     case 'check_claude_installed': {
       // Check if 'claude' CLI is available
       // Strategy: use an interactive login shell to resolve the real PATH

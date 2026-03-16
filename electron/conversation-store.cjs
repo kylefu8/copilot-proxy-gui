@@ -125,6 +125,33 @@ function loadSession(sessionId) {
 }
 
 /**
+ * Delete specific sessions by their IDs.
+ * @param {string[]} sessionIds
+ */
+function deleteSessions(sessionIds) {
+  ensureDir()
+  const idSet = new Set(sessionIds)
+
+  // Delete session files
+  for (const id of idSet) {
+    const sessionFile = path.join(conversationsDir, `${id}.json`)
+    if (fs.existsSync(sessionFile)) {
+      fs.unlinkSync(sessionFile)
+    }
+  }
+
+  // Update index
+  const indexFile = path.join(conversationsDir, 'index.json')
+  if (fs.existsSync(indexFile)) {
+    try {
+      let index = JSON.parse(fs.readFileSync(indexFile, 'utf8'))
+      index = index.filter(s => !idSet.has(s.sessionId))
+      fs.writeFileSync(indexFile, JSON.stringify(index, null, 2), 'utf8')
+    } catch { /* ignore */ }
+  }
+}
+
+/**
  * Delete all conversation data.
  */
 function clearAll() {
@@ -142,4 +169,4 @@ function getStoragePath() {
   return conversationsDir
 }
 
-module.exports = { init, appendConversation, listSessions, loadSession, clearAll, getStoragePath }
+module.exports = { init, appendConversation, listSessions, loadSession, deleteSessions, clearAll, getStoragePath }
