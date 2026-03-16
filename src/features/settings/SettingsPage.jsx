@@ -236,7 +236,9 @@ export function SettingsPage({
             />
             {t('conv.toggle')}
           </label>
+        </div>
 
+        <div className="grid2" style={{ marginTop: 8 }}>
           <label className="model-select-row" title={t('settings.closeActionTooltip')}>
             {t('settings.closeAction')}
             <select className="port-input" value={config.closeAction || ''} onChange={e => onChangeConfig('closeAction', e.target.value)}>

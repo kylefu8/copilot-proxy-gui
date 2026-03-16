@@ -1618,6 +1618,9 @@ ipcMain.handle('copilot-proxy:invoke', async (_event, request) => {
       if (logWin && !logWin.isDestroyed()) {
         logWin.webContents.send('copilot-proxy:theme-update', payload?.theme || 'midnight')
       }
+      if (convWin && !convWin.isDestroyed()) {
+        convWin.webContents.send('copilot-proxy:theme-update', payload?.theme || 'midnight')
+      }
       return { ok: true }
     }
     case 'delete_token': {
