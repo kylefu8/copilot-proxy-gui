@@ -83,16 +83,29 @@ const clearBtn = document.getElementById('clearBtn')
 const deleteSelBtn = document.getElementById('deleteSelBtn')
 const searchInput = document.getElementById('searchInput')
 
-let sessions = [], activeSessionId = null, activeEntries = [], selectedIds = new Set(), searchTerm = ''
+let sessions = [], activeSessionId = null, activeEntries = [], selectedIds = new Set(), searchTerm = '', currentLang = 'en'
+
+const i18n = {
+  zh: { sessions: '会话', clear: '清除', del: '删除', selectSession: '选择一个会话', loading: '加载中...', empty: '暂无对话', noMatch: '无匹配', allCleared: '已全部清除', search: '搜索...', exchanges: '条对话', today: '今天', yesterday: '昨天', unknown: '未知', user: '用户', assistant: '助手', tools: '工具', tokens: 'tokens', stream: '流式', nonStream: '非流式', noMessages: '(无消息)', noResponse: '(无回复)', confirmClearAll: '删除所有对话记录？', confirmDelete: '删除 {n} 个会话？', truncated: '... (已截断)' },
+  en: { sessions: 'Sessions', clear: 'Clear', del: 'Del', selectSession: 'Select a session', loading: 'Loading...', empty: 'No conversations', noMatch: 'No matches', allCleared: 'All cleared', search: 'Search...', exchanges: 'exchanges', today: 'Today', yesterday: 'Yesterday', unknown: 'Unknown', user: 'User', assistant: 'Assistant', tools: 'Tools', tokens: 'tokens', stream: 'stream', nonStream: 'non-stream', noMessages: '(no messages)', noResponse: '(no response)', confirmClearAll: 'Delete all conversation recordings?', confirmDelete: 'Delete {n} session(s)?', truncated: '... (truncated)' },
+}
+function t(key) { return i18n[currentLang]?.[key] ?? i18n.en[key] ?? key }
+
+function updateStaticTexts() {
+  document.querySelector('.sidebar-header h2').textContent = t('sessions')
+  clearBtn.textContent = t('clear')
+  searchInput.placeholder = t('search')
+  if (!activeSessionId) { headerText.textContent = t('selectSession'); messagesEl.innerHTML = '<div class="empty">' + t('selectSession') + '</div>' }
+}
 
 function formatTime(ts) { return ts ? new Date(ts).toLocaleString() : '' }
 
 function formatDate(ts) {
-  if (!ts) return 'Unknown'
+  if (!ts) return t('unknown')
   const d = new Date(ts), today = new Date(), yday = new Date(today)
   yday.setDate(today.getDate() - 1)
-  if (d.toLocaleDateString() === today.toLocaleDateString()) return 'Today'
-  if (d.toLocaleDateString() === yday.toLocaleDateString()) return 'Yesterday'
+  if (d.toLocaleDateString() === today.toLocaleDateString()) return t('today')
+  if (d.toLocaleDateString() === yday.toLocaleDateString()) return t('yesterday')
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
@@ -119,7 +132,7 @@ function renderSessions() {
     for (const s of items) {
       const div = document.createElement('div')
       div.className = 'session-item' + (s.sessionId === activeSessionId ? ' active' : '') + (selectedIds.has(s.sessionId) ? ' selected' : '')
-      div.innerHTML = '<input type="checkbox" class="session-check"' + (selectedIds.has(s.sessionId) ? ' checked' : '') + ' /><div class="session-info"><div class="session-client">' + clientLabel(s.client) + '</div><div class="session-model">' + (s.model||'unknown') + '</div><div class="session-time">' + formatTime(s.startTime) + '</div><div class="session-count">' + (s.entryCount||0) + ' exchanges</div></div>'
+      div.innerHTML = '<input type="checkbox" class="session-check"' + (selectedIds.has(s.sessionId) ? ' checked' : '') + ' /><div class="session-info"><div class="session-client">' + clientLabel(s.client) + '</div><div class="session-model">' + (s.model||'unknown') + '</div><div class="session-time">' + formatTime(s.startTime) + '</div><div class="session-count">' + (s.entryCount||0) + ' ' + t('exchanges') + '</div></div>'
       const cb = div.querySelector('.session-check')
       cb.addEventListener('click', e => { e.stopPropagation(); if (cb.checked) selectedIds.add(s.sessionId); else selectedIds.delete(s.sessionId); div.classList.toggle('selected', cb.checked); updateDeleteBtn() })
       div.addEventListener('click', e => { if (e.target === cb) return; loadSession(s.sessionId) })
@@ -139,7 +152,7 @@ function extractUserMessage(entry) {
       if (Array.isArray(m.content)) return m.content.map(b => b.text || b.content || '').filter(Boolean).join('\n')
     }
   }
-  return '(no user message)'
+  return t('noMessages')
 }
 
 function esc(text) { const d = document.createElement('div'); d.textContent = text; return d.innerHTML }
@@ -152,14 +165,14 @@ function highlight(text, term) {
 
 function renderEntry(entry, term) {
   const div = document.createElement('div'); div.className = 'conv-entry'
-  const user = extractUserMessage(entry), ai = entry.response?.content || '(no response)'
+  const user = extractUserMessage(entry), ai = entry.response?.content || t('noResponse')
   const model = entry.model || '', dur = entry.durationMs ? (entry.durationMs/1000).toFixed(1)+'s' : ''
-  const time = formatTime(entry.timestamp), mode = entry.stream ? 'stream' : 'non-stream'
+  const time = formatTime(entry.timestamp), mode = entry.stream ? t('stream') : t('nonStream')
   let usage = ''
-  if (entry.response?.usage) { const u = entry.response.usage; const i = u.input_tokens ?? u.prompt_tokens ?? '', o = u.output_tokens ?? u.completion_tokens ?? ''; if (i||o) usage = '<span>tokens: '+i+'\u2192'+o+'</span>' }
+  if (entry.response?.usage) { const u = entry.response.usage; const i = u.input_tokens ?? u.prompt_tokens ?? '', o = u.output_tokens ?? u.completion_tokens ?? ''; if (i||o) usage = '<span>' + t('tokens') + ': '+i+'\u2192'+o+'</span>' }
   let tools = ''
-  if (entry.response?.toolCalls?.length) { tools = '<div class="tool-calls">Tools: ' + esc(entry.response.toolCalls.map(tc => tc.name || tc.function?.name || 'tool').join(', ')) + '</div>' }
-  div.innerHTML = '<div class="conv-meta"><span>'+time+'</span><span>'+model+'</span><span>'+mode+'</span><span>'+dur+'</span>'+usage+'</div><div class="conv-request"><div class="conv-label">User</div><div class="conv-text">'+highlight(trunc(user,5000),term)+'</div></div><div class="conv-response"><div class="conv-label">Assistant</div><div class="conv-text">'+highlight(trunc(ai,10000),term)+'</div>'+tools+'</div>'
+  if (entry.response?.toolCalls?.length) { tools = '<div class="tool-calls">' + t('tools') + ': ' + esc(entry.response.toolCalls.map(tc => tc.name || tc.function?.name || 'tool').join(', ')) + '</div>' }
+  div.innerHTML = '<div class="conv-meta"><span>'+time+'</span><span>'+model+'</span><span>'+mode+'</span><span>'+dur+'</span>'+usage+'</div><div class="conv-request"><div class="conv-label">'+t('user')+'</div><div class="conv-text">'+highlight(trunc(user,5000),term)+'</div></div><div class="conv-response"><div class="conv-label">'+t('assistant')+'</div><div class="conv-text">'+highlight(trunc(ai,10000),term)+'</div>'+tools+'</div>'
   return div
 }
 
@@ -172,7 +185,7 @@ function filterEntries(entries, term) {
 function renderMessages() {
   messagesEl.innerHTML = ''
   const filtered = filterEntries(activeEntries, searchTerm)
-  if (!filtered.length) { messagesEl.innerHTML = '<div class="empty">'+(searchTerm?'No matches':'No conversations')+'</div>'; return }
+  if (!filtered.length) { messagesEl.innerHTML = '<div class="empty">'+(searchTerm?t('noMatch'):t('empty'))+'</div>'; return }
   const inner = document.createElement('div'); inner.className = 'messages-inner'
   for (const e of filtered) inner.appendChild(renderEntry(e, searchTerm))
   messagesEl.appendChild(inner)
@@ -185,24 +198,24 @@ async function loadSession(sid) {
   activeSessionId = sid; renderSessions(); headerText.textContent = 'Loading...'
   activeEntries = (await window.conversationAPI.loadSession(sid)) || []
   const s = sessions.find(x => x.sessionId === sid)
-  headerText.textContent = !activeEntries.length ? 'Empty session' : clientLabel(s?.client)+' \u00b7 '+(s?.model||'')+' \u00b7 '+activeEntries.length+' exchanges'
+  headerText.textContent = !activeEntries.length ? t('empty') : clientLabel(s?.client)+' \u00b7 '+(s?.model||'')+' \u00b7 '+activeEntries.length+' '+t('exchanges')
   renderMessages(); if (!searchTerm) messagesEl.scrollTop = messagesEl.scrollHeight
 }
 
 let st; searchInput.addEventListener('input', () => { clearTimeout(st); st = setTimeout(() => { searchTerm = searchInput.value.trim(); renderMessages() }, 200) })
 
 clearBtn.addEventListener('click', async () => {
-  if (!confirm('Delete all conversation recordings?')) return
+  if (!confirm(t('confirmClearAll'))) return
   await window.conversationAPI.clearAll()
   sessions = []; activeSessionId = null; activeEntries = []; selectedIds.clear()
-  renderSessions(); messagesEl.innerHTML = '<div class="empty">All cleared</div>'; headerText.textContent = 'Select a session'
+  renderSessions(); messagesEl.innerHTML = '<div class="empty">'+t('allCleared')+'</div>'; headerText.textContent = t('selectSession')
 })
 
 deleteSelBtn.addEventListener('click', async () => {
   const ids = [...selectedIds]
-  if (!ids.length || !confirm('Delete '+ids.length+' session(s)?')) return
+  if (!ids.length || !confirm(t('confirmDelete').replace('{n}', ids.length))) return
   await window.conversationAPI.deleteSessions(ids)
-  if (ids.includes(activeSessionId)) { activeSessionId = null; activeEntries = []; messagesEl.innerHTML = '<div class="empty">No session selected</div>'; headerText.textContent = 'Select a session' }
+  if (ids.includes(activeSessionId)) { activeSessionId = null; activeEntries = []; messagesEl.innerHTML = '<div class="empty">'+t('selectSession')+'</div>'; headerText.textContent = t('selectSession') }
   selectedIds.clear(); await loadSessions()
 })
 
@@ -225,6 +238,14 @@ window.conversationAPI.onThemeUpdate(theme => {
   r.setProperty('--msg-user',t.mu); r.setProperty('--msg-ai',t.ma)
 })
 
+window.conversationAPI.onLangUpdate(lang => {
+  currentLang = lang
+  updateStaticTexts()
+  renderSessions()
+  if (activeSessionId) renderMessages()
+})
+
+updateStaticTexts()
 loadSessions()
 </script>
 </body>

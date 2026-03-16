@@ -23,4 +23,9 @@ contextBridge.exposeInMainWorld('conversationAPI', {
     ipcRenderer.on('copilot-proxy:theme-update', listener)
     return () => ipcRenderer.removeListener('copilot-proxy:theme-update', listener)
   },
+  onLangUpdate(callback) {
+    const listener = (_event, lang) => callback(lang)
+    ipcRenderer.on('copilot-proxy:lang-update', listener)
+    return () => ipcRenderer.removeListener('copilot-proxy:lang-update', listener)
+  },
 })

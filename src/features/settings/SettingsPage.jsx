@@ -228,6 +228,15 @@ export function SettingsPage({
             {t('settings.autoStart')}
           </label>
 
+          <label className="checkbox" title={t('conv.toggleTooltip')}>
+            <input
+              type="checkbox"
+              checked={!!config.conversationLog}
+              onChange={e => onChangeConfig('conversationLog', e.target.checked)}
+            />
+            {t('conv.toggle')}
+          </label>
+
           <label className="model-select-row" title={t('settings.closeActionTooltip')}>
             {t('settings.closeAction')}
             <select className="port-input" value={config.closeAction || ''} onChange={e => onChangeConfig('closeAction', e.target.value)}>

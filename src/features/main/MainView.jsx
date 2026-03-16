@@ -159,14 +159,14 @@ export function MainView({
             <button type="button" className="icon-btn lang-toggle" onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} title={t('header.lang')}>
               {lang === 'zh' ? 'EN' : '中'}
             </button>
-            <button type="button" className="icon-btn" onClick={onOpenSettings} title={t('header.settings')}>
-              ⚙️
+            <button type="button" className="icon-btn" onClick={() => openConversationWindow(config.theme)} title={t('conv.openWindow')}>
+              💬
             </button>
             <button type="button" className="icon-btn" onClick={() => openLogWindow(config.theme)} title={t('logs.openWindow')}>
               📋
             </button>
-            <button type="button" className="icon-btn" onClick={() => openConversationWindow(config.theme)} title={t('conv.openWindow')}>
-              💬
+            <button type="button" className="icon-btn" onClick={onOpenSettings} title={t('header.settings')}>
+              ⚙️
             </button>
             <button type="button" className="icon-btn" onClick={onOpenAbout} title={t('header.about')}>
               ℹ
@@ -309,21 +309,6 @@ export function MainView({
             </>
           )}
         </section>
-
-        {/* Conversation recording toggle */}
-        <div className="row" style={{ fontSize: '0.9em' }}>
-          <label className="checkbox" title={t('conv.toggleTooltip')}>
-            <input
-              type="checkbox"
-              checked={!!config.conversationLog}
-              onChange={e => onChangeAndSaveConfig('conversationLog', e.target.checked)}
-            />
-            {t('conv.toggle')}
-          </label>
-          {config.conversationLog && isRunning && (
-            <span className="hint">{t('conv.needRestart')}</span>
-          )}
-        </div>
 
         {/* Collapsible: Usage */}
         <details

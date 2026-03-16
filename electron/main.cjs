@@ -1469,6 +1469,7 @@ function openConversationWindow(payload) {
     if (convWin && !convWin.isDestroyed()) {
       const theme = payload?.theme || 'midnight'
       convWin.webContents.send('copilot-proxy:theme-update', theme)
+      convWin.webContents.send('copilot-proxy:lang-update', currentLang)
     }
   })
 
@@ -1732,6 +1733,9 @@ ipcMain.handle('copilot-proxy:invoke', async (_event, request) => {
       if (lang === 'zh' || lang === 'en') {
         currentLang = lang
         updateTrayStatus()
+        if (convWin && !convWin.isDestroyed()) {
+          convWin.webContents.send('copilot-proxy:lang-update', lang)
+        }
       }
       return { ok: true }
     }
