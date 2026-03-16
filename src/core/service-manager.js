@@ -6,14 +6,14 @@ const state = {
   lastError: null,
 }
 
-export async function startService(args, modelName) {
+export async function startService(args, modelName, options = {}) {
   state.lastError = null
 
   try {
     const runtime = getRuntime()
 
     if (runtime !== 'web') {
-      const result = await invokeDesktop('service_start', { args, modelName })
+      const result = await invokeDesktop('service_start', { args, modelName, ...options })
       state.status = 'running'
       state.pid = result?.pid ?? null
       return { ok: true, ...result }
@@ -136,6 +136,15 @@ export async function openLogWindow(theme) {
   const runtime = getRuntime()
   if (runtime === 'web') return { ok: false }
   return invokeDesktop('open_log_window', { theme })
+}
+
+/**
+ * Open the conversation viewer window.
+ */
+export async function openConversationWindow(theme) {
+  const runtime = getRuntime()
+  if (runtime === 'web') return { ok: false }
+  return invokeDesktop('open_conversation_window', { theme })
 }
 
 /**

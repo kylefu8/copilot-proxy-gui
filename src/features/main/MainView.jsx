@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { resizeWindow, launchClaudeCode, writeClaudeEnv, clearClaudeEnv, checkClaudeEnv, checkClaudeInstalled, openLogWindow, updateLogTheme } from '../../core/service-manager'
+import { resizeWindow, launchClaudeCode, writeClaudeEnv, clearClaudeEnv, checkClaudeEnv, checkClaudeInstalled, openLogWindow, openConversationWindow, updateLogTheme } from '../../core/service-manager'
 import { themes, applyTheme } from '../../core/config-store'
 import { useI18n } from '../../core/i18n'
 
@@ -165,6 +165,9 @@ export function MainView({
             <button type="button" className="icon-btn" onClick={() => openLogWindow(config.theme)} title={t('logs.openWindow')}>
               📋
             </button>
+            <button type="button" className="icon-btn" onClick={() => openConversationWindow(config.theme)} title={t('conv.openWindow')}>
+              💬
+            </button>
             <button type="button" className="icon-btn" onClick={onOpenAbout} title={t('header.about')}>
               ℹ
             </button>
@@ -306,6 +309,21 @@ export function MainView({
             </>
           )}
         </section>
+
+        {/* Conversation recording toggle */}
+        <div className="row" style={{ fontSize: '0.9em' }}>
+          <label className="checkbox" title={t('conv.toggleTooltip')}>
+            <input
+              type="checkbox"
+              checked={!!config.conversationLog}
+              onChange={e => onChangeAndSaveConfig('conversationLog', e.target.checked)}
+            />
+            {t('conv.toggle')}
+          </label>
+          {config.conversationLog && isRunning && (
+            <span className="hint">{t('conv.needRestart')}</span>
+          )}
+        </div>
 
         {/* Collapsible: Usage */}
         <details

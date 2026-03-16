@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Conversations</title>
+<style>
+:root {
+  --bg: #1a1b2e; --bg2: #222340; --text: #e0e0e0; --text-dim: #8888aa;
+  --accent: #6d8cff; --border: #333455; --msg-user: #2a3060; --msg-ai: #1e2540;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; font-size: 13px; }
+
+/* Sidebar */
+.sidebar { width: 240px; min-width: 200px; border-right: 1px solid var(--border); display: flex; flex-direction: column; background: var(--bg2); }
+.sidebar-header { padding: 10px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+.sidebar-header h2 { font-size: 14px; flex: 1; }
+.sidebar-header button { background: none; border: 1px solid var(--border); color: var(--text-dim); border-radius: 4px; padding: 2px 8px; cursor: pointer; font-size: 11px; }
+.sidebar-header button:hover { color: var(--text); border-color: var(--text-dim); }
+.session-list { flex: 1; overflow-y: auto; }
+.session-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--border); }
+.session-item:hover { background: rgba(109,140,255,0.1); }
+.session-item.active { background: rgba(109,140,255,0.2); border-left: 3px solid var(--accent); }
+.session-client { font-size: 12px; font-weight: 600; color: var(--accent); }
+.session-model { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+.session-time { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+.session-count { font-size: 10px; color: var(--text-dim); }
+
+/* Main content */
+.content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.content-header { padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text-dim); }
+.messages { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 12px; }
+.empty { display: flex; align-items: center; justify-content: center; flex: 1; color: var(--text-dim); font-size: 14px; }
+
+/* Conversation entry */
+.conv-entry { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.conv-meta { padding: 6px 12px; background: var(--bg2); font-size: 11px; color: var(--text-dim); display: flex; gap: 12px; flex-wrap: wrap; }
+.conv-meta span { white-space: nowrap; }
+.conv-request, .conv-response { padding: 8px 12px; }
+.conv-request { background: var(--msg-user); }
+.conv-response { background: var(--msg-ai); }
+.conv-label { font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px; letter-spacing: 0.5px; }
+.conv-text { white-space: pre-wrap; word-break: break-word; line-height: 1.5; font-size: 13px; }
+.conv-text code { background: rgba(255,255,255,0.08); padding: 1px 4px; border-radius: 3px; font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 12px; }
+.conv-text pre { background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; overflow-x: auto; margin: 4px 0; }
+.conv-text pre code { background: none; padding: 0; }
+.tool-calls { margin-top: 6px; padding: 6px 8px; background: rgba(255,255,255,0.04); border-radius: 4px; font-size: 11px; color: var(--text-dim); }
+
+/* Themes */
+body.theme-frost { --bg: #f5f0f0; --bg2: #efe8e8; --text: #4a3030; --text-dim: #8a7070; --accent: #c06060; --border: #ddd0d0; --msg-user: #f8f0f0; --msg-ai: #fff5f5; }
+body.theme-ocean { --bg: #0d1b2a; --bg2: #1b2838; --text: #c8d8e8; --text-dim: #6888a8; --accent: #4a90d9; --border: #1e3448; --msg-user: #142840; --msg-ai: #0f2030; }
+body.theme-forest { --bg: #1a2e1a; --bg2: #223822; --text: #c8e0c8; --text-dim: #6a9a6a; --accent: #4caf50; --border: #2a4a2a; --msg-user: #1e3a1e; --msg-ai: #162e16; }
+body.theme-midnight { --bg: #1a1b2e; --bg2: #222340; --text: #e0e0e0; --text-dim: #8888aa; --accent: #6d8cff; --border: #333455; --msg-user: #2a3060; --msg-ai: #1e2540; }
+</style>
+</head>
+<body class="theme-midnight">
+
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h2>Sessions</h2>
+    <button id="clearBtn" title="Clear all">Clear</button>
+  </div>
+  <div class="session-list" id="sessionList"></div>
+</div>
+
+<div class="content">
+  <div class="content-header" id="contentHeader">Select a session</div>
+  <div class="messages" id="messages">
+    <div class="empty">No session selected</div>
+  </div>
+</div>
+
+<script>
+const sessionListEl = document.getElementById('sessionList')
+const messagesEl = document.getElementById('messages')
+const contentHeaderEl = document.getElementById('contentHeader')
+const clearBtn = document.getElementById('clearBtn')
+
+let sessions = []
+let activeSessionId = null
+
+function formatTime(ts) {
+  if (!ts) return ''
+  const d = new Date(ts)
+  return d.toLocaleString()
+}
+
+function clientLabel(type) {
+  const labels = {
+    'claude-code': 'Claude Code',
+    'anthropic': 'Anthropic',
+    'openai': 'OpenAI',
+    'openai-responses': 'Responses API',
+    'cursor': 'Cursor',
+    'continue': 'Continue',
+    'cline': 'Cline',
+  }
+  return labels[type] || type
+}
+
+function renderSessions() {
+  sessionListEl.innerHTML = ''
+  for (const s of sessions) {
+    const div = document.createElement('div')
+    div.className = 'session-item' + (s.sessionId === activeSessionId ? ' active' : '')
+    div.innerHTML = `
+      <div class="session-client">${clientLabel(s.client)}</div>
+      <div class="session-model">${s.model || 'unknown'}</div>
+      <div class="session-time">${formatTime(s.startTime)}</div>
+      <div class="session-count">${s.entryCount || 0} exchanges</div>
+    `
+    div.addEventListener('click', () => loadSession(s.sessionId))
+    sessionListEl.appendChild(div)
+  }
+}
+
+function extractUserMessage(entry) {
+  const msgs = entry.request?.messages
+  if (!msgs || !Array.isArray(msgs)) return '(no messages)'
+  // Find the last user message
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    const m = msgs[i]
+    if (m.role === 'user') {
+      if (typeof m.content === 'string') return m.content
+      if (Array.isArray(m.content)) {
+        return m.content.map(b => b.text || b.content || '').filter(Boolean).join('\n')
+      }
+    }
+  }
+  return '(no user message)'
+}
+
+function renderEntry(entry) {
+  const div = document.createElement('div')
+  div.className = 'conv-entry'
+
+  const userMsg = extractUserMessage(entry)
+  const aiMsg = entry.response?.content || '(no response)'
+  const model = entry.model || ''
+  const dur = entry.durationMs ? `${(entry.durationMs / 1000).toFixed(1)}s` : ''
+  const time = formatTime(entry.timestamp)
+  const stream = entry.stream ? 'stream' : 'non-stream'
+
+  let usageHtml = ''
+  if (entry.response?.usage) {
+    const u = entry.response.usage
+    const input = u.input_tokens ?? u.prompt_tokens ?? ''
+    const output = u.output_tokens ?? u.completion_tokens ?? ''
+    if (input || output) usageHtml = `<span>tokens: ${input}→${output}</span>`
+  }
+
+  let toolHtml = ''
+  if (entry.response?.toolCalls?.length) {
+    const names = entry.response.toolCalls.map(tc => tc.name || tc.function?.name || 'tool').join(', ')
+    toolHtml = `<div class="tool-calls">Tools: ${names}</div>`
+  }
+
+  div.innerHTML = `
+    <div class="conv-meta">
+      <span>${time}</span>
+      <span>${model}</span>
+      <span>${stream}</span>
+      <span>${dur}</span>
+      ${usageHtml}
+    </div>
+    <div class="conv-request">
+      <div class="conv-label">User</div>
+      <div class="conv-text">${escapeHtml(truncate(userMsg, 5000))}</div>
+    </div>
+    <div class="conv-response">
+      <div class="conv-label">Assistant</div>
+      <div class="conv-text">${escapeHtml(truncate(aiMsg, 10000))}</div>
+      ${toolHtml}
+    </div>
+  `
+  return div
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div')
+  div.textContent = text
+  return div.innerHTML
+}
+
+function truncate(text, max) {
+  if (!text) return ''
+  if (text.length <= max) return text
+  return text.slice(0, max) + '\n... (truncated)'
+}
+
+async function loadSessions() {
+  const result = await window.conversationAPI.listSessions()
+  sessions = result || []
+  renderSessions()
+}
+
+async function loadSession(sessionId) {
+  activeSessionId = sessionId
+  renderSessions()
+  contentHeaderEl.textContent = 'Loading...'
+  const entries = await window.conversationAPI.loadSession(sessionId)
+  messagesEl.innerHTML = ''
+  if (!entries || entries.length === 0) {
+    messagesEl.innerHTML = '<div class="empty">No conversations in this session</div>'
+    contentHeaderEl.textContent = 'Empty session'
+    return
+  }
+  const s = sessions.find(s => s.sessionId === sessionId)
+  contentHeaderEl.textContent = `${clientLabel(s?.client)} · ${s?.model || ''} · ${entries.length} exchanges`
+  for (const entry of entries) {
+    messagesEl.appendChild(renderEntry(entry))
+  }
+  messagesEl.scrollTop = messagesEl.scrollHeight
+}
+
+clearBtn.addEventListener('click', async () => {
+  if (confirm('Delete all conversation recordings?')) {
+    await window.conversationAPI.clearAll()
+    sessions = []
+    activeSessionId = null
+    renderSessions()
+    messagesEl.innerHTML = '<div class="empty">All conversations cleared</div>'
+    contentHeaderEl.textContent = 'Select a session'
+  }
+})
+
+// Real-time updates
+window.conversationAPI.onNewConversation((entry) => {
+  // Refresh session list
+  loadSessions()
+  // If viewing this session, append
+  if (entry.sessionId === activeSessionId) {
+    messagesEl.appendChild(renderEntry(entry))
+    messagesEl.scrollTop = messagesEl.scrollHeight
+  }
+})
+
+window.conversationAPI.onThemeUpdate((theme) => {
+  document.body.className = `theme-${theme}`
+})
+
+// Initial load
+loadSessions()
+</script>
+</body>
+</html>
