@@ -31,6 +31,7 @@
 - 模型列表拉取 & 默认模型 / 快速模型选择（选择即保存，主界面支持一键刷新模型列表）
 - Claude Code 集成：一键启动 & 写入/清除 `~/.claude/settings.json` 配置；若已存在持久化配置，切换模型后自动同步
 - 用量看板（配额进度条 + 详细数据折叠展示）
+- 对话记录：将经过代理的请求与 AI 回复记录到本地 JSON 文件，内置对话浏览器（按会话/日期分组、全文搜索、批量删除、实时推送、配色/语言同步）
 - 风险声明对话框（首次启动弹出，需接受后方可启动服务）
 - 5 套内置主题：Lavender (Frost)、Peach (Sakura)、Cherry、Midnight、Aurora
 - 配置管理：端口、账号类型、详细日志、手动审批、速率限制等
@@ -116,6 +117,11 @@ GUI 默认请求本地 `http://localhost:4399`，可在设置页修改端口。
 | `resize_window` | 调整窗口大小 |
 | `open_log_window` | 打开独立日志查看器窗口 |
 | `update_log_theme` | 同步主题到日志窗口 |
+| `open_conversation_window` | 打开对话记录浏览器窗口 |
+| `list_conversation_sessions` | 列出所有对话会话 |
+| `load_conversation_session` | 加载指定会话的对话记录 |
+| `delete_conversation_sessions` | 删除指定会话 |
+| `clear_conversations` | 清除所有对话记录 |
 
 ### 致谢
 
@@ -135,6 +141,7 @@ A desktop GUI for [copilot-proxy](https://github.com/Jer-y/copilot-proxy), built
 - Model list fetching & default/fast model selection (saves on select, with one-click model refresh on the main screen)
 - Claude Code integration: one-click launch & write/clear `~/.claude/settings.json`; when persistent Claude config already exists, model changes auto-sync
 - Usage dashboard (quota progress bar + collapsible detail view)
+- Conversation recording: save proxy requests and AI responses to local JSON files, with built-in viewer (session/date grouping, full-text search, batch delete, real-time push, theme/language sync)
 - Risk disclaimer dialog (shown on first launch, must accept before starting)
 - 5 built-in themes: Lavender (Frost), Peach (Sakura), Cherry, Midnight, Aurora
 - Settings: port, account type, verbose logging, manual approval, rate limiting, etc.
@@ -220,6 +227,11 @@ The proxy child process is automatically stopped when the window is closed.
 | `resize_window` | Resize window |
 | `open_log_window` | Open standalone log viewer window |
 | `update_log_theme` | Sync theme to log viewer window |
+| `open_conversation_window` | Open conversation viewer window |
+| `list_conversation_sessions` | List all conversation sessions |
+| `load_conversation_session` | Load entries for a session |
+| `delete_conversation_sessions` | Delete specific sessions |
+| `clear_conversations` | Clear all conversation data |
 
 ### Acknowledgments
 
