@@ -168,7 +168,7 @@ h1, h2, h3, p { margin: 0; }
 }
 
 label { display: grid; gap: 3px; }
-.checkbox { display: flex; align-items: center; gap: 6px; }
+.checkbox { display: flex; align-items: center; gap: 6px; line-height: 1; }
 
 .error { color: var(--red); }
 .success { color: var(--green); }

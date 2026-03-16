@@ -265,7 +265,7 @@ function AppInner() {
     // Actually start
     setServiceBusy(true)
     const args = toCliArgs(config)
-    await startService(args, config.defaultModel)
+    await startService(args, config.defaultModel, { conversationLog: config.conversationLog })
     try {
       await waitForReady(baseUrl)
     }
@@ -302,7 +302,7 @@ function AppInner() {
     ;(async () => {
       setServiceBusy(true)
       const args = toCliArgs(config)
-      await startService(args, config.defaultModel)
+      await startService(args, config.defaultModel, { conversationLog: config.conversationLog })
       try {
         await waitForReady(baseUrl)
       }

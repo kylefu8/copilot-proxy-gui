@@ -98,9 +98,12 @@ function findRepoRoot() {
 const repoRoot = isPackaged ? null : findRepoRoot()
 const preloadPath = path.resolve(__dirname, 'preload.cjs')
 const logPreloadPath = path.resolve(__dirname, 'log-preload.cjs')
+const convPreloadPath = path.resolve(__dirname, 'conversation-preload.cjs')
+const conversationStore = require('./conversation-store.cjs')
 
 let mainWin = null
 let logWin = null
+let convWin = null
 let tray = null
 let isQuitting = false
 // Detect system language: use Chinese if locale starts with 'zh', otherwise English
@@ -425,6 +428,8 @@ function serviceStart(payload) {
 
   serviceLogs = []
 
+  const convLogEnv = payload?.conversationLog ? { COPILOT_PROXY_CONVERSATION_LOG: '1' } : {}
+
   if (isPackaged) {
     // Prefer JS bundle (lightweight) over legacy bun-compiled binary
     const bundlePath = path.join(process.resourcesPath, 'copilot-proxy-bundle.mjs')
@@ -440,7 +445,7 @@ function serviceStart(payload) {
           stdio: ['ignore', 'pipe', 'pipe'],
           windowsHide: true,
           shell: false,
-          env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+          env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', ...convLogEnv },
         },
       )
     } else if (fs.existsSync(legacyBinaryPath)) {
@@ -452,6 +457,7 @@ function serviceStart(payload) {
           stdio: ['ignore', 'pipe', 'pipe'],
           windowsHide: true,
           shell: false,
+          env: { ...process.env, ...convLogEnv },
         },
       )
     } else {
@@ -469,7 +475,7 @@ function serviceStart(payload) {
           stdio: ['ignore', 'pipe', 'pipe'],
           windowsHide: true,
           shell: false,
-          env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+          env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', ...convLogEnv },
         },
       )
     } else if (repoRoot) {
@@ -486,6 +492,7 @@ function serviceStart(payload) {
           stdio: ['ignore', 'pipe', 'pipe'],
           windowsHide: true,
           shell: false,
+          env: { ...process.env, ...convLogEnv },
         },
       )
     } else {
@@ -494,7 +501,21 @@ function serviceStart(payload) {
   }
 
   serviceChild.stdout.on('data', (chunk) => {
-    String(chunk).split('\n').filter(Boolean).forEach(pushLog)
+    String(chunk).split('\n').filter(Boolean).forEach((line) => {
+      if (line.startsWith('[CONV]')) {
+        try {
+          const entry = JSON.parse(line.slice(6))
+          conversationStore.appendConversation(entry)
+          if (convWin && !convWin.isDestroyed()) {
+            convWin.webContents.send('copilot-proxy:new-conversation', entry)
+          }
+        } catch (e) {
+          console.warn('Failed to parse [CONV] line:', e)
+        }
+      } else {
+        pushLog(line)
+      }
+    })
   })
 
   serviceChild.stderr.on('data', (chunk) => {
@@ -1413,6 +1434,48 @@ function openLogWindow(payload) {
   return { ok: true, alreadyOpen: false }
 }
 
+// ─── Conversation Viewer Window ─────────────────────────────────────
+
+function openConversationWindow(payload) {
+  if (convWin && !convWin.isDestroyed()) {
+    convWin.close()
+    convWin = null
+    return { ok: true, closed: true }
+  }
+
+  convWin = new BrowserWindow({
+    width: 960,
+    height: 650,
+    minWidth: 600,
+    minHeight: 400,
+    resizable: true,
+    title: 'Copilot Proxy – Conversations',
+    icon: icons.createAppIcon(),
+    webPreferences: {
+      preload: convPreloadPath,
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  })
+
+  if (process.platform !== 'darwin') {
+    convWin.setMenuBarVisibility(false)
+  }
+
+  convWin.loadFile(path.resolve(__dirname, 'conversation-viewer.html'))
+  convWin.on('closed', () => { convWin = null })
+
+  convWin.webContents.once('did-finish-load', () => {
+    if (convWin && !convWin.isDestroyed()) {
+      const theme = payload?.theme || 'midnight'
+      convWin.webContents.send('copilot-proxy:theme-update', theme)
+      convWin.webContents.send('copilot-proxy:lang-update', currentLang)
+    }
+  })
+
+  return { ok: true, alreadyOpen: false }
+}
+
 // ─── Electron Window ────────────────────────────────────────────────
 
 function createWindow() {
@@ -1555,6 +1618,9 @@ ipcMain.handle('copilot-proxy:invoke', async (_event, request) => {
       if (logWin && !logWin.isDestroyed()) {
         logWin.webContents.send('copilot-proxy:theme-update', payload?.theme || 'midnight')
       }
+      if (convWin && !convWin.isDestroyed()) {
+        convWin.webContents.send('copilot-proxy:theme-update', payload?.theme || 'midnight')
+      }
       return { ok: true }
     }
     case 'delete_token': {
@@ -1595,6 +1661,18 @@ ipcMain.handle('copilot-proxy:invoke', async (_event, request) => {
       return { ok: true }
     case 'get_update_state':
       return { ...updateState }
+    case 'open_conversation_window':
+      return openConversationWindow(payload)
+    case 'list_conversation_sessions':
+      return conversationStore.listSessions()
+    case 'load_conversation_session':
+      return conversationStore.loadSession(payload?.sessionId)
+    case 'clear_conversations':
+      conversationStore.clearAll()
+      return { ok: true }
+    case 'delete_conversation_sessions':
+      conversationStore.deleteSessions(payload?.sessionIds || [])
+      return { ok: true }
     case 'check_claude_installed': {
       // Check if 'claude' CLI is available
       // Strategy: use an interactive login shell to resolve the real PATH
@@ -1658,6 +1736,9 @@ ipcMain.handle('copilot-proxy:invoke', async (_event, request) => {
       if (lang === 'zh' || lang === 'en') {
         currentLang = lang
         updateTrayStatus()
+        if (convWin && !convWin.isDestroyed()) {
+          convWin.webContents.send('copilot-proxy:lang-update', lang)
+        }
       }
       return { ok: true }
     }
@@ -1692,6 +1773,7 @@ if (!gotLock) {
 // ─── App lifecycle ──────────────────────────────────────────────────
 
 if (gotLock) app.whenReady().then(() => {
+  conversationStore.init(app.getPath('userData'))
   createTray()
   createWindow()
 

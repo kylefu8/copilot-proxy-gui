@@ -25,6 +25,7 @@ export const defaultConfig = {
   theme: 'frost',
   lang: 'zh',  // static default; overridden by detectSystemLang() on first launch
   closeAction: '',            // '' = ask, 'minimize', 'quit'
+  conversationLog: false,     // record proxy conversations to local files
   riskAcceptedAt: null,       // ISO timestamp when user accepted risk
   riskConfigFingerprint: '',  // fingerprint of config at acceptance time
 }

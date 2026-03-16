@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Conversations</title>
+<style>
+:root {
+  --bg: #121829; --bg2: #1a2240; --text: #e4e8f7; --text-dim: #8892b3;
+  --accent: #6d8cff; --border: #2a3558; --msg-user: #1a2240; --msg-ai: #161e35;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; font-size: 13px; }
+
+.sidebar { width: 240px; min-width: 200px; border-right: 1px solid var(--border); display: flex; flex-direction: column; background: var(--bg2); }
+.sidebar-header { padding: 10px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 6px; }
+.sidebar-header h2 { font-size: 14px; flex: 1; }
+.sidebar-header button { background: none; border: 1px solid var(--border); color: var(--text-dim); border-radius: 4px; padding: 2px 8px; cursor: pointer; font-size: 11px; }
+.sidebar-header button:hover { color: var(--text); border-color: var(--text-dim); }
+.session-list { flex: 1; overflow-y: auto; min-height: 0; }
+.date-group { padding: 6px 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent); background: var(--bg); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1; }
+.session-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 8px; }
+.session-item:hover { background: rgba(109,140,255,0.1); }
+.session-item.active { background: rgba(109,140,255,0.2); border-left: 3px solid var(--accent); }
+.session-item.selected { background: rgba(109,140,255,0.12); }
+.session-check { margin-top: 2px; cursor: pointer; accent-color: var(--accent); }
+.session-info { flex: 1; min-width: 0; }
+.session-client { font-size: 12px; font-weight: 600; color: var(--accent); }
+.session-model { font-size: 11px; color: var(--text-dim); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.session-time { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+.session-count { font-size: 10px; color: var(--text-dim); }
+
+.content { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; min-height: 0; }
+.content-header { padding: 8px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.header-row { display: flex; align-items: center; gap: 10px; }
+.header-row > span { font-size: 13px; color: var(--text-dim); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-box input { font: inherit; font-size: 12px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--text); width: 160px; }
+.search-box input::placeholder { color: var(--text-dim); }
+.messages { flex: 1; overflow-y: auto; padding: 12px 16px; min-height: 0; }
+.messages-inner { display: flex; flex-direction: column; gap: 12px; }
+.empty { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-dim); font-size: 14px; }
+
+.conv-entry { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
+.conv-meta { padding: 6px 12px; background: var(--bg2); font-size: 11px; color: var(--text-dim); display: flex; gap: 12px; flex-wrap: wrap; }
+.conv-meta span { white-space: nowrap; }
+.conv-request, .conv-response { padding: 8px 12px; }
+.conv-request { background: var(--msg-user); }
+.conv-response { background: var(--msg-ai); }
+.conv-label { font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px; letter-spacing: 0.5px; }
+.conv-text { white-space: pre-wrap; word-break: break-word; line-height: 1.5; font-size: 13px; }
+.conv-text code { background: rgba(128,128,128,0.15); padding: 1px 4px; border-radius: 3px; font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 12px; }
+.conv-text pre { background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px; overflow-x: auto; margin: 4px 0; }
+.conv-text pre code { background: none; padding: 0; }
+.tool-calls { margin-top: 6px; padding: 6px 8px; background: rgba(128,128,128,0.08); border-radius: 4px; font-size: 11px; color: var(--text-dim); }
+mark { background: rgba(255,220,50,0.35); color: inherit; border-radius: 2px; padding: 0 1px; }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h2>Sessions</h2>
+    <button id="deleteSelBtn" title="Delete selected" style="display:none">Del</button>
+    <button id="clearBtn" title="Clear all">Clear</button>
+  </div>
+  <div class="session-list" id="sessionList"></div>
+</div>
+
+<div class="content">
+  <div class="content-header">
+    <div class="header-row">
+      <span id="contentHeaderText">Select a session</span>
+      <div class="search-box"><input type="text" id="searchInput" placeholder="Search..." /></div>
+    </div>
+  </div>
+  <div class="messages" id="messages"><div class="empty">No session selected</div></div>
+</div>
+
+<script>
+const sessionListEl = document.getElementById('sessionList')
+const messagesEl = document.getElementById('messages')
+const headerText = document.getElementById('contentHeaderText')
+const clearBtn = document.getElementById('clearBtn')
+const deleteSelBtn = document.getElementById('deleteSelBtn')
+const searchInput = document.getElementById('searchInput')
+
+let sessions = [], activeSessionId = null, activeEntries = [], selectedIds = new Set(), searchTerm = '', currentLang = 'en'
+
+const i18n = {
+  zh: { sessions: '会话', clear: '清除', del: '删除', selectSession: '选择一个会话', loading: '加载中...', empty: '暂无对话', noMatch: '无匹配', allCleared: '已全部清除', search: '搜索...', exchanges: '条对话', today: '今天', yesterday: '昨天', unknown: '未知', user: '用户', assistant: '助手', tools: '工具', tokens: 'tokens', stream: '流式', nonStream: '非流式', noMessages: '(无消息)', noResponse: '(无回复)', confirmClearAll: '删除所有对话记录？', confirmDelete: '删除 {n} 个会话？', truncated: '... (已截断)' },
+  en: { sessions: 'Sessions', clear: 'Clear', del: 'Del', selectSession: 'Select a session', loading: 'Loading...', empty: 'No conversations', noMatch: 'No matches', allCleared: 'All cleared', search: 'Search...', exchanges: 'exchanges', today: 'Today', yesterday: 'Yesterday', unknown: 'Unknown', user: 'User', assistant: 'Assistant', tools: 'Tools', tokens: 'tokens', stream: 'stream', nonStream: 'non-stream', noMessages: '(no messages)', noResponse: '(no response)', confirmClearAll: 'Delete all conversation recordings?', confirmDelete: 'Delete {n} session(s)?', truncated: '... (truncated)' },
+}
+function t(key) { return i18n[currentLang]?.[key] ?? i18n.en[key] ?? key }
+
+function updateStaticTexts() {
+  document.querySelector('.sidebar-header h2').textContent = t('sessions')
+  clearBtn.textContent = t('clear')
+  searchInput.placeholder = t('search')
+  if (!activeSessionId) { headerText.textContent = t('selectSession'); messagesEl.innerHTML = '<div class="empty">' + t('selectSession') + '</div>' }
+}
+
+function formatTime(ts) { return ts ? new Date(ts).toLocaleString() : '' }
+
+function formatDate(ts) {
+  if (!ts) return t('unknown')
+  const d = new Date(ts), today = new Date(), yday = new Date(today)
+  yday.setDate(today.getDate() - 1)
+  if (d.toLocaleDateString() === today.toLocaleDateString()) return t('today')
+  if (d.toLocaleDateString() === yday.toLocaleDateString()) return t('yesterday')
+  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
+const clientLabels = { 'claude-code':'Claude Code', anthropic:'Anthropic', openai:'OpenAI', 'openai-responses':'Responses API', cursor:'Cursor', 'continue':'Continue', cline:'Cline' }
+function clientLabel(t) { return clientLabels[t] || t }
+
+function updateDeleteBtn() {
+  deleteSelBtn.style.display = selectedIds.size > 0 ? '' : 'none'
+  deleteSelBtn.textContent = 'Del (' + selectedIds.size + ')'
+}
+
+function renderSessions() {
+  sessionListEl.innerHTML = ''
+  const groups = new Map()
+  for (const s of sessions) {
+    const key = formatDate(s.startTime || s.lastTime)
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key).push(s)
+  }
+  for (const [dateKey, items] of groups) {
+    const dg = document.createElement('div')
+    dg.className = 'date-group'; dg.textContent = dateKey
+    sessionListEl.appendChild(dg)
+    for (const s of items) {
+      const div = document.createElement('div')
+      div.className = 'session-item' + (s.sessionId === activeSessionId ? ' active' : '') + (selectedIds.has(s.sessionId) ? ' selected' : '')
+      div.innerHTML = '<input type="checkbox" class="session-check"' + (selectedIds.has(s.sessionId) ? ' checked' : '') + ' /><div class="session-info"><div class="session-client">' + clientLabel(s.client) + '</div><div class="session-model">' + (s.model||'unknown') + '</div><div class="session-time">' + formatTime(s.startTime) + '</div><div class="session-count">' + (s.entryCount||0) + ' ' + t('exchanges') + '</div></div>'
+      const cb = div.querySelector('.session-check')
+      cb.addEventListener('click', e => { e.stopPropagation(); if (cb.checked) selectedIds.add(s.sessionId); else selectedIds.delete(s.sessionId); div.classList.toggle('selected', cb.checked); updateDeleteBtn() })
+      div.addEventListener('click', e => { if (e.target === cb) return; loadSession(s.sessionId) })
+      sessionListEl.appendChild(div)
+    }
+  }
+  updateDeleteBtn()
+}
+
+function extractUserMessage(entry) {
+  const msgs = entry.request?.messages
+  if (!msgs || !Array.isArray(msgs)) return '(no messages)'
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    const m = msgs[i]
+    if (m.role === 'user') {
+      if (typeof m.content === 'string') return m.content
+      if (Array.isArray(m.content)) return m.content.map(b => b.text || b.content || '').filter(Boolean).join('\n')
+    }
+  }
+  return t('noMessages')
+}
+
+function esc(text) { const d = document.createElement('div'); d.textContent = text; return d.innerHTML }
+function trunc(text, max) { return !text ? '' : text.length <= max ? text : text.slice(0, max) + '\n... (truncated)' }
+
+function highlight(text, term) {
+  if (!term) return esc(text)
+  return esc(text).replace(new RegExp('(' + term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi'), '<mark>$1</mark>')
+}
+
+function renderEntry(entry, term) {
+  const div = document.createElement('div'); div.className = 'conv-entry'
+  const user = extractUserMessage(entry), ai = entry.response?.content || t('noResponse')
+  const model = entry.model || '', dur = entry.durationMs ? (entry.durationMs/1000).toFixed(1)+'s' : ''
+  const time = formatTime(entry.timestamp), mode = entry.stream ? t('stream') : t('nonStream')
+  let usage = ''
+  if (entry.response?.usage) { const u = entry.response.usage; const i = u.input_tokens ?? u.prompt_tokens ?? '', o = u.output_tokens ?? u.completion_tokens ?? ''; if (i||o) usage = '<span>' + t('tokens') + ': '+i+'\u2192'+o+'</span>' }
+  let tools = ''
+  if (entry.response?.toolCalls?.length) { tools = '<div class="tool-calls">' + t('tools') + ': ' + esc(entry.response.toolCalls.map(tc => tc.name || tc.function?.name || 'tool').join(', ')) + '</div>' }
+  div.innerHTML = '<div class="conv-meta"><span>'+time+'</span><span>'+model+'</span><span>'+mode+'</span><span>'+dur+'</span>'+usage+'</div><div class="conv-request"><div class="conv-label">'+t('user')+'</div><div class="conv-text">'+highlight(trunc(user,5000),term)+'</div></div><div class="conv-response"><div class="conv-label">'+t('assistant')+'</div><div class="conv-text">'+highlight(trunc(ai,10000),term)+'</div>'+tools+'</div>'
+  return div
+}
+
+function filterEntries(entries, term) {
+  if (!term) return entries
+  const l = term.toLowerCase()
+  return entries.filter(e => extractUserMessage(e).toLowerCase().includes(l) || (e.response?.content||'').toLowerCase().includes(l) || (e.model||'').toLowerCase().includes(l))
+}
+
+function renderMessages() {
+  messagesEl.innerHTML = ''
+  const filtered = filterEntries(activeEntries, searchTerm)
+  if (!filtered.length) { messagesEl.innerHTML = '<div class="empty">'+(searchTerm?t('noMatch'):t('empty'))+'</div>'; return }
+  const inner = document.createElement('div'); inner.className = 'messages-inner'
+  for (const e of filtered) inner.appendChild(renderEntry(e, searchTerm))
+  messagesEl.appendChild(inner)
+  if (searchTerm) { const m = messagesEl.querySelector('mark'); if (m) m.scrollIntoView({block:'center',behavior:'smooth'}) }
+}
+
+async function loadSessions() { sessions = (await window.conversationAPI.listSessions()) || []; renderSessions() }
+
+async function loadSession(sid) {
+  activeSessionId = sid; renderSessions(); headerText.textContent = 'Loading...'
+  activeEntries = (await window.conversationAPI.loadSession(sid)) || []
+  const s = sessions.find(x => x.sessionId === sid)
+  headerText.textContent = !activeEntries.length ? t('empty') : clientLabel(s?.client)+' \u00b7 '+(s?.model||'')+' \u00b7 '+activeEntries.length+' '+t('exchanges')
+  renderMessages(); if (!searchTerm) messagesEl.scrollTop = messagesEl.scrollHeight
+}
+
+let st; searchInput.addEventListener('input', () => { clearTimeout(st); st = setTimeout(() => { searchTerm = searchInput.value.trim(); renderMessages() }, 200) })
+
+clearBtn.addEventListener('click', async () => {
+  if (!confirm(t('confirmClearAll'))) return
+  await window.conversationAPI.clearAll()
+  sessions = []; activeSessionId = null; activeEntries = []; selectedIds.clear()
+  renderSessions(); messagesEl.innerHTML = '<div class="empty">'+t('allCleared')+'</div>'; headerText.textContent = t('selectSession')
+})
+
+deleteSelBtn.addEventListener('click', async () => {
+  const ids = [...selectedIds]
+  if (!ids.length || !confirm(t('confirmDelete').replace('{n}', ids.length))) return
+  await window.conversationAPI.deleteSessions(ids)
+  if (ids.includes(activeSessionId)) { activeSessionId = null; activeEntries = []; messagesEl.innerHTML = '<div class="empty">'+t('selectSession')+'</div>'; headerText.textContent = t('selectSession') }
+  selectedIds.clear(); await loadSessions()
+})
+
+window.conversationAPI.onNewConversation(entry => {
+  loadSessions()
+  if (entry.sessionId === activeSessionId) { activeEntries.push(entry); renderMessages(); if (!searchTerm) messagesEl.scrollTop = messagesEl.scrollHeight }
+})
+
+window.conversationAPI.onThemeUpdate(theme => {
+  const themes = {
+    midnight: { bg:'#121829', bg2:'#1a2240', text:'#e4e8f7', dim:'#8892b3', accent:'#6d8cff', border:'#2a3558', mu:'#1a2240', ma:'#161e35' },
+    aurora:   { bg:'#0c0a1a', bg2:'#15122a', text:'#ede9fe', dim:'#a196c8', accent:'#a855f7', border:'#2d2654', mu:'#15122a', ma:'#1a1530' },
+    frost:    { bg:'#f5f0ff', bg2:'#ede4ff', text:'#1e1535', dim:'#6b5b8a', accent:'#7c3aed', border:'#ddd0f2', mu:'#f0eafc', ma:'#f5f0ff' },
+    sakura:   { bg:'#fff4ec', bg2:'#ffe8d8', text:'#2c1810', dim:'#8c6048', accent:'#e8602c', border:'#f0c8a8', mu:'#fff0e6', ma:'#fff4ec' },
+    cherry:   { bg:'#fdf0f4', bg2:'#f8e0ea', text:'#2e0e1e', dim:'#8a4566', accent:'#e0457b', border:'#eab0c4', mu:'#fce8f0', ma:'#fdf0f4' },
+  }
+  const t = themes[theme] || themes.midnight, r = document.documentElement.style
+  r.setProperty('--bg',t.bg); r.setProperty('--bg2',t.bg2); r.setProperty('--text',t.text)
+  r.setProperty('--text-dim',t.dim); r.setProperty('--accent',t.accent); r.setProperty('--border',t.border)
+  r.setProperty('--msg-user',t.mu); r.setProperty('--msg-ai',t.ma)
+})
+
+window.conversationAPI.onLangUpdate(lang => {
+  currentLang = lang
+  updateStaticTexts()
+  renderSessions()
+  if (activeSessionId) renderMessages()
+})
+
+updateStaticTexts()
+loadSessions()
+</script>
+</body>
+</html>

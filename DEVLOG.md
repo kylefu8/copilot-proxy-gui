@@ -205,3 +205,42 @@ Hotfix for macOS window height regression introduced in v0.3.0 and CI workflow f
 
 - GUI release: `v0.3.1`
 - Embedded proxy: upstream `main` @ `b162b63` (post-`v0.3.1`)
+
+## 2026-03-16 — v0.3.2 conversation recording
+
+### Summary
+
+New feature: conversation recording with a built-in conversation viewer. Records full request/response content flowing through the proxy to local JSON files, with session tracking, client identification, and a dedicated viewer window.
+
+### Conversation recording
+
+- New `conversation-log.ts` utility in proxy emits `[CONV]` structured lines to stdout
+- Hooks in all 3 route handlers: chat-completions, messages, responses
+- Supports both non-streaming and streaming (assembled after stream ends)
+- Client detection: Claude Code, Cursor, Continue, Cline, generic OpenAI/Anthropic
+- Session tracking by (clientType + model) with 15-min timeout heuristic
+- Electron intercepts `[CONV]` lines, stores per-session JSON files in `{userData}/conversations/`
+- Controlled by `conversationLog` config toggle (default off, requires service restart)
+- `COPILOT_PROXY_CONVERSATION_LOG=1` env var passed to proxy child process
+
+### Conversation viewer
+
+- Dedicated Electron window with sidebar (sessions) + main area (messages)
+- Sessions grouped by date (Today / Yesterday / date)
+- Content search with debounce, text highlighting, and auto-scroll to first match
+- Multi-select sessions with checkbox + batch delete
+- Clear all button
+- Full i18n (Chinese/English) with real-time language switching
+- Theme sync: follows app theme changes in real-time
+- Real-time: new conversations pushed to open viewer via IPC
+
+### UI polish
+
+- Header button order: theme, lang, conversations, logs, settings, about
+- Recording toggle moved to Settings page (Service Config section)
+- Settings checkbox alignment fix
+
+### Reference release
+
+- GUI release: `v0.3.2`
+- Embedded proxy: upstream `main` @ `b162b63` (post-`v0.3.1`)

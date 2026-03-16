@@ -93,6 +93,10 @@ const translations = {
     // ── Logs ──────────────────────────────────────
     'logs.title': 'Verbose 日志',
     'logs.openWindow': '📋 打开日志窗口',
+    'conv.toggle': '记录对话',
+    'conv.toggleTooltip': '记录经过代理的对话内容到本地文件',
+    'conv.openWindow': '💬 对话记录',
+    'conv.needRestart': '需重启服务生效',
     'logs.following': '已跟随，点击停止',
     'logs.notFollowing': '未跟随，点击开启',
     'logs.fontSmaller': '缩小字体',
@@ -277,6 +281,10 @@ const translations = {
     // ── Logs ──────────────────────────────────────
     'logs.title': 'Verbose Logs',
     'logs.openWindow': '📋 Open Log Window',
+    'conv.toggle': 'Record Conversations',
+    'conv.toggleTooltip': 'Record proxy conversations to local files',
+    'conv.openWindow': '💬 Conversations',
+    'conv.needRestart': 'Restart service to take effect',
     'logs.following': 'Following, click to stop',
     'logs.notFollowing': 'Not following, click to start',
     'logs.fontSmaller': 'Smaller font',

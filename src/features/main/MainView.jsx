@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { resizeWindow, launchClaudeCode, writeClaudeEnv, clearClaudeEnv, checkClaudeEnv, checkClaudeInstalled, openLogWindow, updateLogTheme } from '../../core/service-manager'
+import { resizeWindow, launchClaudeCode, writeClaudeEnv, clearClaudeEnv, checkClaudeEnv, checkClaudeInstalled, openLogWindow, openConversationWindow, updateLogTheme } from '../../core/service-manager'
 import { themes, applyTheme } from '../../core/config-store'
 import { useI18n } from '../../core/i18n'
 
@@ -159,11 +159,14 @@ export function MainView({
             <button type="button" className="icon-btn lang-toggle" onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} title={t('header.lang')}>
               {lang === 'zh' ? 'EN' : '中'}
             </button>
-            <button type="button" className="icon-btn" onClick={onOpenSettings} title={t('header.settings')}>
-              ⚙️
+            <button type="button" className="icon-btn" onClick={() => openConversationWindow(config.theme)} title={t('conv.openWindow')}>
+              💬
             </button>
             <button type="button" className="icon-btn" onClick={() => openLogWindow(config.theme)} title={t('logs.openWindow')}>
               📋
+            </button>
+            <button type="button" className="icon-btn" onClick={onOpenSettings} title={t('header.settings')}>
+              ⚙️
             </button>
             <button type="button" className="icon-btn" onClick={onOpenAbout} title={t('header.about')}>
               ℹ
