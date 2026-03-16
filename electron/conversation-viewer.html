@@ -5,8 +5,8 @@
 <title>Conversations</title>
 <style>
 :root {
-  --bg: #1a1b2e; --bg2: #222340; --text: #e0e0e0; --text-dim: #8888aa;
-  --accent: #6d8cff; --border: #333455; --msg-user: #2a3060; --msg-ai: #1e2540;
+  --bg: #121829; --bg2: #1a2240; --text: #e4e8f7; --text-dim: #8892b3;
+  --accent: #6d8cff; --border: #2a3558; --msg-user: #1a2240; --msg-ai: #161e35;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; font-size: 13px; }
@@ -17,7 +17,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .sidebar-header h2 { font-size: 14px; flex: 1; }
 .sidebar-header button { background: none; border: 1px solid var(--border); color: var(--text-dim); border-radius: 4px; padding: 2px 8px; cursor: pointer; font-size: 11px; }
 .sidebar-header button:hover { color: var(--text); border-color: var(--text-dim); }
-.session-list { flex: 1; overflow-y: auto; }
+.session-list { flex: 1; overflow-y: auto; min-height: 0; }
 .session-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--border); }
 .session-item:hover { background: rgba(109,140,255,0.1); }
 .session-item.active { background: rgba(109,140,255,0.2); border-left: 3px solid var(--accent); }
@@ -27,13 +27,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .session-count { font-size: 10px; color: var(--text-dim); }
 
 /* Main content */
-.content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-.content-header { padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text-dim); }
-.messages { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 12px; }
-.empty { display: flex; align-items: center; justify-content: center; flex: 1; color: var(--text-dim); font-size: 14px; }
+.content { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; min-height: 0; }
+.content-header { padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text-dim); flex-shrink: 0; }
+.messages { flex: 1; overflow-y: auto; padding: 12px 16px; min-height: 0; }
+.messages-inner { display: flex; flex-direction: column; gap: 12px; }
+.empty { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-dim); font-size: 14px; }
 
 /* Conversation entry */
-.conv-entry { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.conv-entry { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
 .conv-meta { padding: 6px 12px; background: var(--bg2); font-size: 11px; color: var(--text-dim); display: flex; gap: 12px; flex-wrap: wrap; }
 .conv-meta span { white-space: nowrap; }
 .conv-request, .conv-response { padding: 8px 12px; }
@@ -41,19 +42,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .conv-response { background: var(--msg-ai); }
 .conv-label { font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px; letter-spacing: 0.5px; }
 .conv-text { white-space: pre-wrap; word-break: break-word; line-height: 1.5; font-size: 13px; }
-.conv-text code { background: rgba(255,255,255,0.08); padding: 1px 4px; border-radius: 3px; font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 12px; }
-.conv-text pre { background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; overflow-x: auto; margin: 4px 0; }
+.conv-text code { background: rgba(128,128,128,0.15); padding: 1px 4px; border-radius: 3px; font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 12px; }
+.conv-text pre { background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px; overflow-x: auto; margin: 4px 0; }
 .conv-text pre code { background: none; padding: 0; }
-.tool-calls { margin-top: 6px; padding: 6px 8px; background: rgba(255,255,255,0.04); border-radius: 4px; font-size: 11px; color: var(--text-dim); }
-
-/* Themes */
-body.theme-frost { --bg: #f5f0f0; --bg2: #efe8e8; --text: #4a3030; --text-dim: #8a7070; --accent: #c06060; --border: #ddd0d0; --msg-user: #f8f0f0; --msg-ai: #fff5f5; }
-body.theme-ocean { --bg: #0d1b2a; --bg2: #1b2838; --text: #c8d8e8; --text-dim: #6888a8; --accent: #4a90d9; --border: #1e3448; --msg-user: #142840; --msg-ai: #0f2030; }
-body.theme-forest { --bg: #1a2e1a; --bg2: #223822; --text: #c8e0c8; --text-dim: #6a9a6a; --accent: #4caf50; --border: #2a4a2a; --msg-user: #1e3a1e; --msg-ai: #162e16; }
-body.theme-midnight { --bg: #1a1b2e; --bg2: #222340; --text: #e0e0e0; --text-dim: #8888aa; --accent: #6d8cff; --border: #333455; --msg-user: #2a3060; --msg-ai: #1e2540; }
+.tool-calls { margin-top: 6px; padding: 6px 8px; background: rgba(128,128,128,0.08); border-radius: 4px; font-size: 11px; color: var(--text-dim); }
 </style>
 </head>
-<body class="theme-midnight">
+<body>
 
 <div class="sidebar">
   <div class="sidebar-header">
@@ -207,9 +202,12 @@ async function loadSession(sessionId) {
   }
   const s = sessions.find(s => s.sessionId === sessionId)
   contentHeaderEl.textContent = `${clientLabel(s?.client)} · ${s?.model || ''} · ${entries.length} exchanges`
+  const inner = document.createElement('div')
+  inner.className = 'messages-inner'
   for (const entry of entries) {
-    messagesEl.appendChild(renderEntry(entry))
+    inner.appendChild(renderEntry(entry))
   }
+  messagesEl.appendChild(inner)
   messagesEl.scrollTop = messagesEl.scrollHeight
 }
 
@@ -230,14 +228,41 @@ window.conversationAPI.onNewConversation((entry) => {
   loadSessions()
   // If viewing this session, append
   if (entry.sessionId === activeSessionId) {
-    messagesEl.appendChild(renderEntry(entry))
+    let inner = messagesEl.querySelector('.messages-inner')
+    if (!inner) {
+      inner = document.createElement('div')
+      inner.className = 'messages-inner'
+      messagesEl.innerHTML = ''
+      messagesEl.appendChild(inner)
+    }
+    inner.appendChild(renderEntry(entry))
     messagesEl.scrollTop = messagesEl.scrollHeight
   }
 })
 
 window.conversationAPI.onThemeUpdate((theme) => {
-  document.body.className = `theme-${theme}`
+  applyTheme(theme)
 })
+
+function applyTheme(theme) {
+  const themes = {
+    midnight: { bg: '#121829', bg2: '#1a2240', text: '#e4e8f7', dim: '#8892b3', accent: '#6d8cff', border: '#2a3558', msgUser: '#1a2240', msgAi: '#161e35' },
+    aurora:   { bg: '#0c0a1a', bg2: '#15122a', text: '#ede9fe', dim: '#a196c8', accent: '#a855f7', border: '#2d2654', msgUser: '#15122a', msgAi: '#1a1530' },
+    frost:    { bg: '#f5f0ff', bg2: '#ede4ff', text: '#1e1535', dim: '#6b5b8a', accent: '#7c3aed', border: '#ddd0f2', msgUser: '#f0eafc', msgAi: '#f5f0ff' },
+    sakura:   { bg: '#fff4ec', bg2: '#ffe8d8', text: '#2c1810', dim: '#8c6048', accent: '#e8602c', border: '#f0c8a8', msgUser: '#fff0e6', msgAi: '#fff4ec' },
+    cherry:   { bg: '#fdf0f4', bg2: '#f8e0ea', text: '#2e0e1e', dim: '#8a4566', accent: '#e0457b', border: '#eab0c4', msgUser: '#fce8f0', msgAi: '#fdf0f4' },
+  }
+  const t = themes[theme] || themes.midnight
+  const r = document.documentElement.style
+  r.setProperty('--bg', t.bg)
+  r.setProperty('--bg2', t.bg2)
+  r.setProperty('--text', t.text)
+  r.setProperty('--text-dim', t.dim)
+  r.setProperty('--accent', t.accent)
+  r.setProperty('--border', t.border)
+  r.setProperty('--msg-user', t.msgUser)
+  r.setProperty('--msg-ai', t.msgAi)
+}
 
 // Initial load
 loadSessions()
