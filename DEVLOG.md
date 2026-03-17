@@ -244,3 +244,28 @@ New feature: conversation recording with a built-in conversation viewer. Records
 
 - GUI release: `v0.3.2`
 - Embedded proxy: upstream `main` @ `b162b63` (post-`v0.3.1`)
+
+## 2026-03-17 — v0.3.3 middleware refactor
+
+### Summary
+
+Refactored conversation recording from handler-level hooks to a single Hono middleware. This eliminates upstream merge conflicts when handler code changes, reducing fork maintenance from 4 modified files to 2 (1 new file + 2 lines in server.ts).
+
+### Architecture change
+
+- Replaced `conversation-log.ts` + 3 handler hooks with `conversation-middleware.ts`
+- Middleware intercepts requests/responses at the Hono layer, before/after handlers
+- Non-streaming: clones response and reads JSON
+- Streaming: uses `ReadableStream.tee()` to observe SSE chunks without affecting client delivery
+- Only `server.ts` modified (+2 lines: import + use), zero handler changes
+
+### Why
+
+- v0.3.2 handler hooks conflicted with upstream updates to the same files
+- Middleware approach means upstream can freely change handlers without affecting our conversation recording
+- Evaluated and rejected log-parsing approach (upstream logs truncate payloads to 400 chars, no full content)
+
+### Reference release
+
+- GUI release: `v0.3.3`
+- Embedded proxy: fork `conv-middleware` branch based on upstream `b162b63`
