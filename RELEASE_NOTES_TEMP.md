@@ -10,7 +10,9 @@
 ## 🔧 Bug Fixes / 修复
 
 • Fix Claude Code detection on macOS when nvm is used (npm_config_prefix conflict) / 修复 macOS 下使用 nvm 时 Claude Code 检测失败的问题
-• Fix missing default-model conversations in viewer on macOS (stdout line splitting) / 修复 macOS 下默认模型对话记录不显示的问题（stdout 行拆分）
+• Fix missing conversations on macOS: buffer stdout lines across pipe chunks / 修复 macOS 下对话记录不显示的问题（stdout 行缓冲）
+• Fix missing conversations on Windows: flush stdout buffer on stream end instead of process exit / 修复 Windows 下对话记录不显示的问题（stdout 缓冲在流结束时 flush）
+• Fix Windows CRLF handling in stdout line parsing / 修复 Windows CRLF 换行符处理
 
 ## 💬 Conversation Recording / 对话记录
 
