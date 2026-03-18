@@ -269,3 +269,27 @@ Refactored conversation recording from handler-level hooks to a single Hono midd
 
 - GUI release: `v0.3.3`
 - Embedded proxy: fork `conv-middleware` branch based on upstream `b162b63`
+
+## 2026-03-18 — v0.3.4 upstream upgrade to v0.4.1
+
+### Summary
+
+Upgraded embedded copilot-proxy from upstream v0.3.1 base (b162b63) to upstream v0.4.1 (29ab862). Conversation recording middleware cherry-picked cleanly onto the new base with zero conflicts.
+
+### Upstream changes included
+
+- `8b6b998` feat: add upstream HTTP resilience controls with Copilot timeout defaults and SSE keepalive
+- `55c1bb6` fix: improve Anthropic Messages protocol compatibility
+- `cb71c60` fix: tighten Anthropic protocol compat and close review follow-ups
+- `e97d5f8` fix: propagate JSONResponseError in count_tokens instead of swallowing it
+
+### Our middleware
+
+- Cherry-picked `conversation-middleware.ts` + `server.ts` 2 lines from `conv-middleware` branch onto v0.4.1 base
+- Zero conflicts — server.ts structure unchanged between v0.3.1 and v0.4.1
+- Fork branch: `conv-middleware-v041` (614e530)
+
+### Reference release
+
+- GUI release: `v0.3.4`
+- Embedded proxy: fork `conv-middleware-v041` based on upstream v0.4.1 (29ab862)
