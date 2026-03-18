@@ -199,6 +199,7 @@ const GITHUB_APP_SCOPES = 'read:user'
 let serviceChild = null
 const MAX_LOG_LINES = 500
 let serviceLogs = []
+let stdoutLineBuffer = ''       // line buffer for stdout to handle partial lines across chunks
 let lastServicePayload = null   // remembered for tray "Start" action
 let lastModelName = ''          // model name shown in tray tooltip
 
@@ -427,6 +428,7 @@ function serviceStart(payload) {
   if (payload?.modelName) lastModelName = payload.modelName
 
   serviceLogs = []
+  stdoutLineBuffer = ''
 
   const convLogEnv = payload?.conversationLog ? { COPILOT_PROXY_CONVERSATION_LOG: '1' } : {}
 
@@ -501,7 +503,14 @@ function serviceStart(payload) {
   }
 
   serviceChild.stdout.on('data', (chunk) => {
-    String(chunk).split('\n').filter(Boolean).forEach((line) => {
+    // Accumulate data into line buffer to handle lines split across chunks
+    // (macOS pipe buffer is ~16KB; large [CONV] JSON can exceed this)
+    stdoutLineBuffer += String(chunk)
+    const parts = stdoutLineBuffer.split('\n')
+    // Last element is either '' (if chunk ended with \n) or a partial line
+    stdoutLineBuffer = parts.pop() || ''
+    for (const line of parts) {
+      if (!line) continue
       if (line.startsWith('[CONV]')) {
         try {
           const entry = JSON.parse(line.slice(6))
@@ -515,7 +524,7 @@ function serviceStart(payload) {
       } else {
         pushLog(line)
       }
-    })
+    }
   })
 
   serviceChild.stderr.on('data', (chunk) => {
@@ -523,6 +532,22 @@ function serviceStart(payload) {
   })
 
   serviceChild.once('exit', (code) => {
+    // Flush any remaining data in stdout line buffer
+    if (stdoutLineBuffer) {
+      const remaining = stdoutLineBuffer
+      stdoutLineBuffer = ''
+      if (remaining.startsWith('[CONV]')) {
+        try {
+          const entry = JSON.parse(remaining.slice(6))
+          conversationStore.appendConversation(entry)
+          if (convWin && !convWin.isDestroyed()) {
+            convWin.webContents.send('copilot-proxy:new-conversation', entry)
+          }
+        } catch { /* ignore partial data on exit */ }
+      } else if (remaining) {
+        pushLog(remaining)
+      }
+    }
     pushLog(`[process exited with code ${code}]`)
     const wasRunning = !!serviceChild
     serviceChild = null
@@ -1682,10 +1707,13 @@ ipcMain.handle('copilot-proxy:invoke', async (_event, request) => {
       if (process.platform !== 'win32') {
         // macOS / Linux: spawn interactive login shell to get full PATH
         const userShell = process.env.SHELL || '/bin/zsh'
+        // Strip npm_config_prefix to avoid nvm compatibility errors
+        const cleanEnv = { ...process.env }
+        delete cleanEnv.npm_config_prefix
         const loginResult = spawnSync(userShell, ['-ilc', 'claude --version'], {
           stdio: 'pipe',
           timeout: 10000,
-          env: { ...process.env },
+          env: cleanEnv,
         })
         if (loginResult.status === 0) {
           const version = String(loginResult.stdout).trim().split('\n').pop()
@@ -1693,7 +1721,7 @@ ipcMain.handle('copilot-proxy:invoke', async (_event, request) => {
           const whichResult = spawnSync(userShell, ['-ilc', 'which claude'], {
             stdio: 'pipe',
             timeout: 5000,
-            env: { ...process.env },
+            env: cleanEnv,
           })
           const claudePath = String(whichResult.stdout).trim().split('\n').pop() || 'claude'
           return { installed: true, version, path: claudePath }

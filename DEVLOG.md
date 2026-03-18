@@ -293,3 +293,29 @@ Upgraded embedded copilot-proxy from upstream v0.3.1 base (b162b63) to upstream 
 
 - GUI release: `v0.3.4`
 - Embedded proxy: fork `conv-middleware-v041` based on upstream v0.4.1 (29ab862)
+
+## 2026-03-18 — v0.3.5 bugfixes
+
+### Summary
+
+Fixed two platform-specific bugs on macOS: Claude Code CLI detection failure caused by nvm/npm_config_prefix conflict, and missing default-model conversations in the conversation viewer due to stdout line splitting across pipe buffer boundaries.
+
+### Claude Code detection fix
+
+- Root cause: Electron inherits `npm_config_prefix` from npm when launched in dev mode; nvm refuses to initialize when this variable is set, so the interactive login shell fails to add nvm-managed paths to PATH
+- Symptom: `claude --version` exits with code 127, GUI shows "Claude Code not installed"
+- Fix: strip `npm_config_prefix` from the environment passed to the detection shell spawn
+- Also affects packaged builds when `npm_config_prefix` is set system-wide
+
+### Conversation recording fix
+
+- Root cause: `stdout.on('data')` chunks are not guaranteed to align with line boundaries; macOS pipe buffer (~16KB) splits large `[CONV]` JSON lines across multiple chunks
+- Symptom: default-model conversations (longer responses → larger JSON) fail `JSON.parse()` because the line is split; fast-model conversations (shorter) fit in one chunk and work fine
+- Fix: introduced `stdoutLineBuffer` to accumulate partial lines across chunks, splitting only on complete `\n` boundaries
+- Also flushes remaining buffer on process exit to avoid losing the last entry
+- Windows unaffected: pipe buffering behavior differs, but the fix is safe on all platforms
+
+### Reference release
+
+- GUI release: `v0.3.5`
+- Embedded proxy: fork `conv-middleware-v041` based on upstream v0.4.1 (29ab862)
