@@ -510,10 +510,12 @@ function serviceStart(payload) {
     // Last element is either '' (if chunk ended with \n) or a partial line
     stdoutLineBuffer = parts.pop() || ''
     for (const line of parts) {
-      if (!line) continue
-      if (line.startsWith('[CONV]')) {
+      // Strip trailing \r (Windows CRLF from ELECTRON_RUN_AS_NODE text-mode stdio)
+      const trimmed = line.endsWith('\r') ? line.slice(0, -1) : line
+      if (!trimmed) continue
+      if (trimmed.startsWith('[CONV]')) {
         try {
-          const entry = JSON.parse(line.slice(6))
+          const entry = JSON.parse(trimmed.slice(6))
           conversationStore.appendConversation(entry)
           if (convWin && !convWin.isDestroyed()) {
             convWin.webContents.send('copilot-proxy:new-conversation', entry)
@@ -522,7 +524,27 @@ function serviceStart(payload) {
           console.warn('Failed to parse [CONV] line:', e)
         }
       } else {
-        pushLog(line)
+        pushLog(trimmed)
+      }
+    }
+  })
+
+  // Flush stdout line buffer when stream ends (guarantees all data events are done)
+  serviceChild.stdout.on('end', () => {
+    if (stdoutLineBuffer) {
+      let remaining = stdoutLineBuffer
+      stdoutLineBuffer = ''
+      if (remaining.endsWith('\r')) remaining = remaining.slice(0, -1)
+      if (remaining.startsWith('[CONV]')) {
+        try {
+          const entry = JSON.parse(remaining.slice(6))
+          conversationStore.appendConversation(entry)
+          if (convWin && !convWin.isDestroyed()) {
+            convWin.webContents.send('copilot-proxy:new-conversation', entry)
+          }
+        } catch { /* ignore partial data */ }
+      } else if (remaining) {
+        pushLog(remaining)
       }
     }
   })
@@ -532,22 +554,6 @@ function serviceStart(payload) {
   })
 
   serviceChild.once('exit', (code) => {
-    // Flush any remaining data in stdout line buffer
-    if (stdoutLineBuffer) {
-      const remaining = stdoutLineBuffer
-      stdoutLineBuffer = ''
-      if (remaining.startsWith('[CONV]')) {
-        try {
-          const entry = JSON.parse(remaining.slice(6))
-          conversationStore.appendConversation(entry)
-          if (convWin && !convWin.isDestroyed()) {
-            convWin.webContents.send('copilot-proxy:new-conversation', entry)
-          }
-        } catch { /* ignore partial data on exit */ }
-      } else if (remaining) {
-        pushLog(remaining)
-      }
-    }
     pushLog(`[process exited with code ${code}]`)
     const wasRunning = !!serviceChild
     serviceChild = null
