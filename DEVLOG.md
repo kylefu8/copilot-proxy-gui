@@ -319,3 +319,36 @@ Fixed two platform-specific bugs on macOS: Claude Code CLI detection failure cau
 
 - GUI release: `v0.3.5`
 - Embedded proxy: fork `conv-middleware-v041` based on upstream v0.4.1 (29ab862)
+
+## 2026-03-23 — v0.3.6 skip-permissions option
+
+### Summary
+
+New feature: added a `--dangerously-skip-permissions` option for launching Claude Code. This allows users to opt-in to skipping all permission confirmation dialogs in Claude Code, with two-stage safety confirmation (settings toggle + launch-time dialog).
+
+### New feature
+
+- New `skipPermissions` config key (default `false`) in `config-store.js`
+- Settings page: red-highlighted checkbox to enable skip-permissions mode; toggling ON opens a danger confirmation dialog, toggling OFF is immediate
+- Main view: when `skipPermissions` is enabled, clicking "Launch Claude Code" first shows a second danger confirmation dialog before proceeding
+- Shared `DangerConfirmDialog` component used by both settings and main view
+- Full i18n: Chinese and English translations for all danger dialog texts
+- Red-themed danger dialog CSS (`.danger-dialog`, `.danger-btn-confirm`, `.checkbox-danger`) using `var(--red)` for automatic theme adaptation
+- `service-manager.js`: `launchClaudeCode` now accepts `options.skipPermissions` and passes it via IPC
+- `electron/main.cjs`: appends `--dangerously-skip-permissions` to the `claude` command on both Windows (PowerShell) and macOS (Terminal.app) when the flag is set
+
+### Files changed
+
+- `src/core/config-store.js` — added `skipPermissions: false` to `defaultConfig`
+- `src/core/i18n.jsx` — added 9 new zh/en translation keys for danger dialogs
+- `src/features/main/DangerConfirmDialog.jsx` — new shared dialog component
+- `src/features/settings/SettingsPage.jsx` — added checkbox + on-enable confirmation dialog
+- `src/features/main/MainView.jsx` — added launch-time confirmation dialog
+- `src/core/service-manager.js` — added `skipPermissions` parameter passthrough
+- `electron/main.cjs` — added `--dangerously-skip-permissions` flag to claude command
+- `src/styles.css` — added danger dialog styles
+
+### Reference release
+
+- GUI release: `v0.3.6`
+- Embedded proxy: fork `conv-middleware-v041` based on upstream v0.4.1 (29ab862)

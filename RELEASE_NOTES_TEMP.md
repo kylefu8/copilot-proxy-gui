@@ -1,33 +1,23 @@
 # What's New / 新功能
 
-## 🔗 Upstream Upgrade / 上游升级
+## 🚀 Claude Code Skip Permissions / Claude Code 跳过权限确认
 
-• Upgrade embedded copilot-proxy from v0.3.1 base to upstream v0.4.1 / 内嵌的 copilot-proxy 从 v0.3.1 基线升级到上游 v0.4.1
-• HTTP resilience: upstream timeout defaults and SSE keepalive / HTTP 韧性：上游超时默认值和 SSE keepalive
-• Improved Anthropic Messages protocol compatibility / 改进的 Anthropic Messages 协议兼容性
-• Fix count_tokens JSONResponseError propagation / 修复 count_tokens 的 JSONResponseError 传播
-
-## 🔧 Bug Fixes / 修复
-
-• Fix Claude Code detection on macOS when nvm is used (npm_config_prefix conflict) / 修复 macOS 下使用 nvm 时 Claude Code 检测失败的问题
-• Fix missing conversations on macOS: buffer stdout lines across pipe chunks / 修复 macOS 下对话记录不显示的问题（stdout 行缓冲）
-• Fix missing conversations on Windows: flush stdout buffer on stream end instead of process exit / 修复 Windows 下对话记录不显示的问题（stdout 缓冲在流结束时 flush）
-• Fix Windows CRLF handling in stdout line parsing / 修复 Windows CRLF 换行符处理
-
-## 💬 Conversation Recording / 对话记录
-
-• Middleware architecture maintained: zero handler changes, zero conflict on upgrade / 中间件架构保持不变：handler 零修改，升级零冲突
+• New setting to launch Claude Code with `--dangerously-skip-permissions` / 新增设置项，启动 Claude Code 时附加 `--dangerously-skip-permissions` 参数
+• Two-stage safety confirmation: danger dialog on enable + danger dialog on launch / 两阶段安全确认：开启时弹窗确认 + 启动时二次确认
+• Red-themed danger dialogs with full Chinese/English bilingual support / 红色警告风格弹窗，完整中英文双语支持
+• Shared `DangerConfirmDialog` component reused across settings and main view / 共享 `DangerConfirmDialog` 组件，设置页和主界面复用
+• Danger dialog styles auto-adapt to all 5 built-in themes / 危险弹窗样式自动适配全部 5 套内置主题
 
 ## ⬇️ Download / 下载
 
 | Platform | File | Note |
 | -------- | ---- | ---- |
-| Windows (Installer) | Copilot.Proxy.GUI-0.3.5-setup.exe | **Recommended** / 推荐，supports lightweight update / 支持轻量更新 |
-| Windows (Portable) | Copilot.Proxy.GUI-0.3.5-portable.exe | No installation needed / 无需安装，双击即用 |
-| macOS (Apple Silicon) | Copilot.Proxy.GUI-0.3.5-arm64.dmg | M1/M2/M3/M4 Mac |
-| macOS (Intel) | Copilot.Proxy.GUI-0.3.5-x64.dmg | Intel Mac |
+| Windows (Installer) | Copilot.Proxy.GUI-0.3.6-setup.exe | **Recommended** / 推荐，supports lightweight update / 支持轻量更新 |
+| Windows (Portable) | Copilot.Proxy.GUI-0.3.6-portable.exe | No installation needed / 无需安装，双击即用 |
+| macOS (Apple Silicon) | Copilot.Proxy.GUI-0.3.6-arm64.dmg | M1/M2/M3/M4 Mac |
+| macOS (Intel) | Copilot.Proxy.GUI-0.3.6-x64.dmg | Intel Mac |
 
 > macOS first launch / macOS 首次启动: Right-click the app → Open → click "Open" in the dialog. If blocked, go to System Settings → Privacy & Security → click "Open Anyway".
 > 右键点击应用 → 打开 → 在弹窗中点击"打开"。如被阻止，前往系统设置 → 隐私与安全性 → 点击"仍要打开"。
 
-Full Changelog: [v0.3.3...v0.3.5](https://github.com/kylefu8/copilot-proxy-gui/compare/v0.3.3...v0.3.5)
+Full Changelog: [v0.3.5...v0.3.6](https://github.com/kylefu8/copilot-proxy-gui/compare/v0.3.5...v0.3.6)
