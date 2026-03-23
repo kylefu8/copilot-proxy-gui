@@ -320,11 +320,17 @@ Fixed two platform-specific bugs on macOS: Claude Code CLI detection failure cau
 - GUI release: `v0.3.5`
 - Embedded proxy: fork `conv-middleware-v041` based on upstream v0.4.1 (29ab862)
 
-## 2026-03-23 — v0.3.6 skip-permissions option
+## 2026-03-23 — v0.3.6 skip-permissions option + upstream v0.4.2
 
 ### Summary
 
-New feature: added a `--dangerously-skip-permissions` option for launching Claude Code. This allows users to opt-in to skipping all permission confirmation dialogs in Claude Code, with two-stage safety confirmation (settings toggle + launch-time dialog).
+New feature: added a `--dangerously-skip-permissions` option for launching Claude Code. This allows users to opt-in to skipping all permission confirmation dialogs in Claude Code, with two-stage safety confirmation (settings toggle + launch-time dialog). Also upgraded embedded proxy to upstream v0.4.2.
+
+### Upstream upgrade
+
+- Upgraded embedded copilot-proxy from v0.4.1 base (614e530) to v0.4.2 (a9ac227)
+- Upstream `e3f6538` fix: Claude Code stalls on Anthropic messages
+- Conversation recording middleware cherry-picked onto v0.4.2 base with zero conflicts
 
 ### New feature
 
@@ -351,4 +357,4 @@ New feature: added a `--dangerously-skip-permissions` option for launching Claud
 ### Reference release
 
 - GUI release: `v0.3.6`
-- Embedded proxy: fork `conv-middleware-v041` based on upstream v0.4.1 (29ab862)
+- Embedded proxy: fork `conv-middleware-v042` based on upstream v0.4.2

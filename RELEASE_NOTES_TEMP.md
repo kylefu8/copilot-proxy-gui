@@ -1,5 +1,10 @@
 # What's New / 新功能
 
+## 🔗 Upstream Upgrade / 上游升级
+
+• Upgrade embedded copilot-proxy from v0.4.1 to v0.4.2 / 内嵌的 copilot-proxy 从 v0.4.1 升级到 v0.4.2
+• Fix Claude Code stalls on Anthropic messages / 修复 Claude Code 在 Anthropic messages 接口上卡住的问题
+
 ## 🚀 Claude Code Skip Permissions / Claude Code 跳过权限确认
 
 • New setting to launch Claude Code with `--dangerously-skip-permissions` / 新增设置项，启动 Claude Code 时附加 `--dangerously-skip-permissions` 参数
