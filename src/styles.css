@@ -792,6 +792,63 @@ pre {
   transform: scale(0.97);
 }
 
+/* ===== Danger Confirm Dialog (Skip Permissions) ===== */
+.danger-dialog {
+  background: var(--card);
+  border: 2px solid var(--red);
+  border-radius: 10px;
+  padding: 20px 24px;
+  width: 420px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+.danger-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--red);
+  margin: 0 0 14px 0;
+  text-align: center;
+}
+.danger-warning-box {
+  background: rgba(255, 80, 80, 0.08);
+  border: 1px solid rgba(255, 80, 80, 0.25);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+.danger-warning-box p {
+  margin: 0 0 4px 0;
+}
+.danger-warning-box p:last-child {
+  margin-bottom: 0;
+}
+.danger-btn-confirm {
+  padding: 7px 22px;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--red);
+  background: var(--red);
+  color: #fff;
+  transition: background 0.15s, transform 0.1s;
+}
+.danger-btn-confirm:hover {
+  filter: brightness(1.15);
+}
+.danger-btn-confirm:active {
+  transform: scale(0.97);
+}
+/* Danger checkbox label in settings */
+.checkbox-danger {
+  color: var(--red);
+  font-weight: 600;
+}
+
 /* ===== Close Confirmation Dialog ===== */
 .close-dialog {
   background: var(--card);

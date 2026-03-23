@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { resizeWindow, launchClaudeCode, writeClaudeEnv, clearClaudeEnv, checkClaudeEnv, checkClaudeInstalled, openLogWindow, openConversationWindow, updateLogTheme } from '../../core/service-manager'
 import { themes, applyTheme } from '../../core/config-store'
 import { useI18n } from '../../core/i18n'
+import { DangerConfirmDialog } from './DangerConfirmDialog'
 
 export function MainView({
   config,
@@ -36,6 +37,7 @@ export function MainView({
   const [envWritten, setEnvWritten] = useState(false)
   const [envBusy, setEnvBusy] = useState(false)
   const [claudeInstalled, setClaudeInstalled] = useState(null) // null = checking, true/false = result
+  const [showDangerLaunch, setShowDangerLaunch] = useState(false)
   const [themeOpen, setThemeOpen] = useState(false)
   const themeRef = useRef(null)
   const contentRef = useRef(null)
@@ -262,9 +264,13 @@ export function MainView({
                 type="button"
                 disabled={claudeLaunching || claudeInstalled === false}
                 onClick={async () => {
+                  if (config.skipPermissions) {
+                    setShowDangerLaunch(true)
+                    return
+                  }
                   setClaudeLaunching(true)
                   try {
-                    const result = await launchClaudeCode(config.port, config.defaultModel, config.defaultSmallModel)
+                    const result = await launchClaudeCode(config.port, config.defaultModel, config.defaultSmallModel, { skipPermissions: false })
                     if (result.canceled) {
                       setClaudeLaunching(false)
                       return
@@ -392,6 +398,31 @@ export function MainView({
 
         </div>
       </div>
+
+      {showDangerLaunch && (
+        <DangerConfirmDialog
+          title={t('danger.launchTitle')}
+          body={t('danger.launchBody')}
+          confirmLabel={t('danger.launchConfirm')}
+          onConfirm={async () => {
+            setShowDangerLaunch(false)
+            setClaudeLaunching(true)
+            try {
+              const result = await launchClaudeCode(config.port, config.defaultModel, config.defaultSmallModel, { skipPermissions: true })
+              if (result.canceled) {
+                setClaudeLaunching(false)
+                return
+              }
+              showToast(t('claude.launched'))
+            } catch (err) {
+              showToast(t('claude.launchFailed') + String(err))
+            } finally {
+              setClaudeLaunching(false)
+            }
+          }}
+          onCancel={() => setShowDangerLaunch(false)}
+        />
+      )}
     </div>
   )
 }
