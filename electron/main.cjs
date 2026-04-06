@@ -839,7 +839,7 @@ function restartApp() {
 // ─── Launch Claude Code ─────────────────────────────────────────────
 
 async function launchClaudeCode(payload) {
-  const { port, model, smallModel, contextWindow } = payload || {}
+  const { port, model, smallModel, contextWindow, skipPermissions } = payload || {}
   const serverUrl = `http://localhost:${port || 4399}`
 
   // Let user pick a workspace folder
@@ -873,13 +873,15 @@ async function launchClaudeCode(payload) {
     CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
   }
 
+  const claudeCmd = skipPermissions ? 'claude --dangerously-skip-permissions' : 'claude'
+
   if (process.platform === 'win32') {
     // Windows: open a visible PowerShell window
     const cdCmd = `Set-Location '${cwd.replace(/'/g, "''")}'`
     const setEnv = Object.entries(envVars)
       .map(([k, v]) => `$env:${k}='${v}'`)
       .join('; ')
-    const psCommand = `${cdCmd}; ${setEnv}; claude`
+    const psCommand = `${cdCmd}; ${setEnv}; ${claudeCmd}`
 
     spawn('cmd.exe', ['/c', 'start', 'powershell.exe', '-NoExit', '-Command', psCommand], {
       detached: true,
@@ -891,7 +893,7 @@ async function launchClaudeCode(payload) {
     const exportEnv = Object.entries(envVars)
       .map(([k, v]) => `export ${k}='${v.replace(/'/g, "'\\''")}'`)
       .join('; ')
-    const script = `cd '${cwd.replace(/'/g, "'\\''")}'  && ${exportEnv} && claude`
+    const script = `cd '${cwd.replace(/'/g, "'\\''")}'  && ${exportEnv} && ${claudeCmd}`
     const osaScript = `tell application "Terminal"
       activate
       do script "${script.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"

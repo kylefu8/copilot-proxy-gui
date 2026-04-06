@@ -793,6 +793,59 @@ pre {
 }
 
 /* ===== Close Confirmation Dialog ===== */
+
+/* ===== Danger Confirmation Dialog ===== */
+.danger-dialog {
+  background: var(--card);
+  border: 1px solid var(--red);
+  border-radius: 10px;
+  padding: 20px 24px;
+  width: 420px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+.danger-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--red);
+  margin: 0 0 12px 0;
+  text-align: center;
+}
+.danger-warning-box {
+  background: rgba(255, 100, 100, 0.06);
+  border: 1px solid rgba(255, 100, 100, 0.2);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+.danger-warning-box p {
+  margin: 0 0 4px 0;
+}
+.danger-warning-box p:last-child {
+  margin-bottom: 0;
+}
+.danger-btn-confirm {
+  background: var(--red);
+  color: #fff;
+  border: 1px solid var(--red);
+  padding: 7px 22px;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.danger-btn-confirm:hover {
+  filter: brightness(1.15);
+}
+.checkbox-danger {
+  color: var(--red) !important;
+}
+
+/* ===== Close Confirmation Dialog ===== */
 .close-dialog {
   background: var(--card);
   border: 1px solid var(--border);

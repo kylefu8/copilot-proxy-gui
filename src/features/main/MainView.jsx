@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { resizeWindow, launchClaudeCode, writeClaudeEnv, clearClaudeEnv, checkClaudeEnv, checkClaudeInstalled, openLogWindow, openConversationWindow, updateLogTheme } from '../../core/service-manager'
 import { themes, applyTheme } from '../../core/config-store'
 import { useI18n } from '../../core/i18n'
+import { DangerConfirmDialog } from './DangerConfirmDialog'
 
 /**
  * Format context window token count for display.
@@ -44,6 +45,7 @@ export function MainView({
 }) {
   const { t, lang, setLang } = useI18n()
   const [claudeLaunching, setClaudeLaunching] = useState(false)
+  const [showDangerLaunch, setShowDangerLaunch] = useState(false)
   const [envWritten, setEnvWritten] = useState(false)
   const [envBusy, setEnvBusy] = useState(false)
   const [claudeInstalled, setClaudeInstalled] = useState(null) // null = checking, true/false = result
@@ -286,6 +288,11 @@ export function MainView({
                 type="button"
                 disabled={claudeLaunching || claudeInstalled === false}
                 onClick={async () => {
+                  // If skipPermissions enabled, show danger confirmation first
+                  if (config.skipPermissions) {
+                    setShowDangerLaunch(true)
+                    return
+                  }
                   setClaudeLaunching(true)
                   try {
                     const result = await launchClaudeCode(config.port, config.defaultModel, config.defaultSmallModel, contextWindow)
@@ -416,6 +423,32 @@ export function MainView({
 
         </div>
       </div>
+
+      {/* Danger confirmation dialog for launching with --dangerously-skip-permissions */}
+      {showDangerLaunch && (
+        <DangerConfirmDialog
+          title={t('danger.launchTitle')}
+          body={t('danger.launchBody')}
+          confirmLabel={t('danger.launchConfirm')}
+          onCancel={() => setShowDangerLaunch(false)}
+          onConfirm={async () => {
+            setShowDangerLaunch(false)
+            setClaudeLaunching(true)
+            try {
+              const result = await launchClaudeCode(config.port, config.defaultModel, config.defaultSmallModel, contextWindow, { skipPermissions: true })
+              if (result.canceled) {
+                setClaudeLaunching(false)
+                return
+              }
+              showToast(t('claude.launched'))
+            } catch (err) {
+              showToast(t('claude.launchFailed') + String(err))
+            } finally {
+              setClaudeLaunching(false)
+            }
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -40,6 +40,7 @@
 - Claude Code 安装检测（未安装时提示并禁用相关按钮）
 - 跨平台支持：Windows 和 macOS（arm64 + x64）
 - 关闭窗口行为可配置（最小化到托盘 / 退出 / 每次询问，支持记住选择）
+- Claude Code `--dangerously-skip-permissions` 模式（两阶段安全确认：设置页开关 + 启动时二次确认）
 
 ### 快速开始
 
@@ -150,6 +151,7 @@ A desktop GUI for [copilot-proxy](https://github.com/Jer-y/copilot-proxy), built
 - Claude Code installation check (warns and disables buttons if not installed)
 - Cross-platform support: Windows & macOS (arm64 + x64)
 - Configurable close behavior (minimize to tray / quit / ask each time, with remember option)
+- Claude Code `--dangerously-skip-permissions` mode (two-stage safety confirmation: settings toggle + launch-time confirmation)
 
 ### Quick Start
 

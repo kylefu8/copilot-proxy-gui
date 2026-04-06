@@ -52,9 +52,9 @@ Rules:
 • Model dropdowns now show context window size, e.g. `claude-opus-4.6-1m (1M)`, `gpt-5.4 (400K)` / 模型下拉框现在显示上下文窗口大小
 • Added `ANTHROPIC_DEFAULT_OPUS_MODEL` to env vars, ensuring `/model opus` and `opusplan` route through proxy / 新增 `ANTHROPIC_DEFAULT_OPUS_MODEL` 环境变量，确保 CC 内切换 opus 别名也走代理
 
-## 🔧 Removed Skip-Permissions / 移除跳过权限功能
+## 🔧 Skip-Permissions Mode / 跳过权限模式
 
-• Removed experimental `--dangerously-skip-permissions` option and all related UI / 移除实验性的 `--dangerously-skip-permissions` 选项及所有相关 UI
+• `--dangerously-skip-permissions` option with two-stage safety confirmation (settings toggle + launch-time dialog) / `--dangerously-skip-permissions` 选项，两阶段安全确认（设置页开关 + 启动时二次确认）
 
 ## ⬇️ Download / 下载
 

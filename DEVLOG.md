@@ -324,7 +324,7 @@ Fixed two platform-specific bugs on macOS: Claude Code CLI detection failure cau
 
 ### Summary
 
-Auto-detect 1M context window models and append `[1m]` suffix to Claude Code environment variables. This enables Claude Code to use the full 1M context window when the selected model supports it, instead of defaulting to 200K. Also enhanced model dropdowns to show context window size, added `ANTHROPIC_DEFAULT_OPUS_MODEL` support, and removed the experimental `--dangerously-skip-permissions` feature.
+Auto-detect 1M context window models and append `[1m]` suffix to Claude Code environment variables. This enables Claude Code to use the full 1M context window when the selected model supports it, instead of defaulting to 200K. Also enhanced model dropdowns to show context window size, added `ANTHROPIC_DEFAULT_OPUS_MODEL` support, and kept the `--dangerously-skip-permissions` feature with two-stage safety confirmation.
 
 ### 1M context window support
 
@@ -348,10 +348,10 @@ Auto-detect 1M context window models and append `[1m]` suffix to Claude Code env
 
 - Auto-sync now includes `models` in its dependency array, so when model data loads after initial render, the context window info is re-synced to `~/.claude/settings.json`
 
-### Removed skip-permissions feature
+### Skip-permissions feature (kept)
 
-- Removed `--dangerously-skip-permissions` option and all related UI (DangerConfirmDialog, settings checkbox, danger dialog i18n keys, danger CSS styles)
-- Simplified `launchClaudeCode` to always launch without skip-permissions flag
+- `--dangerously-skip-permissions` option with two-stage safety confirmation: settings toggle + launch-time danger dialog
+- `DangerConfirmDialog` component reused across settings page and main view
 
 ### Cleanup
 
@@ -359,14 +359,15 @@ Auto-detect 1M context window models and append `[1m]` suffix to Claude Code env
 
 ### Files changed
 
-- `electron/main.cjs` — `[1m]` suffix logic in `writeClaudeEnv` + `launchClaudeCode`, added `ANTHROPIC_DEFAULT_OPUS_MODEL`, removed `skipPermissions`
-- `src/core/service-manager.js` — updated function signatures with `contextWindow` param
-- `src/features/main/MainView.jsx` — context window display in dropdowns, green hint, removed DangerConfirmDialog
+- `electron/main.cjs` — `[1m]` suffix logic in `writeClaudeEnv` + `launchClaudeCode`, added `ANTHROPIC_DEFAULT_OPUS_MODEL`, `skipPermissions` support
+- `src/core/service-manager.js` — updated function signatures with `contextWindow` + `skipPermissions` params
+- `src/features/main/MainView.jsx` — context window display in dropdowns, green hint, DangerConfirmDialog for skip-permissions launch
 - `src/App.jsx` — auto-sync with context window + models dependency
-- `src/core/i18n.jsx` — added `model.largeContext`, removed danger dialog keys
-- `src/core/config-store.js` — removed `skipPermissions` from default config
-- `src/features/settings/SettingsPage.jsx` — removed skip-permissions checkbox and dialog
-- `src/styles.css` — removed danger dialog CSS
+- `src/core/i18n.jsx` — added `model.largeContext`, danger dialog keys
+- `src/core/config-store.js` — `skipPermissions` in default config
+- `src/features/settings/SettingsPage.jsx` — skip-permissions checkbox with danger confirmation
+- `src/features/main/DangerConfirmDialog.jsx` — reusable danger confirmation dialog
+- `src/styles.css` — danger dialog CSS
 
 ### Reference release
 
