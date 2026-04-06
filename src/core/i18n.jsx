@@ -59,6 +59,7 @@ const translations = {
     'model.fetchError': '获取模型失败: ',
     'model.defaultTooltip': '主力模型，用于处理复杂任务和长文本推理，如 Claude Sonnet / GPT-4o 等',
     'model.smallTooltip': '轻量快速模型，用于简单补全、摘要等低延迟场景，如 GPT-4o-mini / Claude Haiku 等（可选）',
+    'model.largeContext': '已检测到 {size} 上下文窗口，将自动追加 [1m] 后缀',
 
     // ── Claude Code ───────────────────────────────
     'claude.launch': '🚀 启动 Claude Code',
@@ -181,16 +182,6 @@ const translations = {
     'risk.summary': '点击「我接受风险」即表示你已阅读并理解上述警告，同意自行承担所有使用风险。',
     'risk.accept': '我接受风险',
 
-    // ── Danger Dialog (Skip Permissions) ────────────
-    'settings.skipPermissions': '跳过权限确认（危险）',
-    'settings.skipPermissionsTooltip': '开启后，启动 Claude Code 时会附加 --dangerously-skip-permissions 参数，跳过所有权限确认弹窗，让 Claude 自动执行文件修改、命令运行等操作。这是一个高风险选项，请确保你了解其含义。',
-    'danger.settingsTitle': '⚠️ 危险操作确认',
-    'danger.settingsBody': '开启此选项后，Claude Code 将跳过所有权限确认弹窗，自动执行文件修改、命令运行、网络请求等操作。这意味着 AI 可以不经你确认地执行任意操作，包括删除文件或运行危险命令。\n\n请确保你完全理解风险后再开启。',
-    'danger.settingsConfirm': '我了解风险，确认开启',
-    'danger.launchTitle': '⚠️ 即将以无权限确认模式启动',
-    'danger.launchBody': '本次启动的 Claude Code 将附加 --dangerously-skip-permissions 参数，AI 将自动执行所有操作而不会弹出权限确认。\n\n请确认你要在此模式下启动。',
-    'danger.launchConfirm': '确认启动',
-
     // ── Close Dialog ──────────────────────────────
     'close.title': '关闭窗口',
     'close.message': '请选择操作',
@@ -257,6 +248,7 @@ const translations = {
     'model.fetchError': 'Failed to fetch models: ',
     'model.defaultTooltip': 'Primary model for complex tasks and long-text reasoning, e.g. Claude Sonnet / GPT-4o',
     'model.smallTooltip': 'Lightweight fast model for simple completions, summaries etc. e.g. GPT-4o-mini / Claude Haiku (optional)',
+    'model.largeContext': '{size} context window detected, [1m] suffix will be auto-appended',
 
     // ── Claude Code ───────────────────────────────
     'claude.launch': '🚀 Launch Claude Code',
@@ -378,16 +370,6 @@ const translations = {
     'risk.warn2': 'Warning 2 — GitHub Safety Notice',
     'risk.summary': 'By clicking "I Accept the Risk", you acknowledge that you have read and understood the above warnings and agree to assume all risks.',
     'risk.accept': 'I Accept the Risk',
-
-    // ── Danger Dialog (Skip Permissions) ────────────
-    'settings.skipPermissions': 'Skip Permissions (Dangerous)',
-    'settings.skipPermissionsTooltip': 'When enabled, Claude Code will be launched with --dangerously-skip-permissions, skipping all permission confirmation dialogs and allowing Claude to automatically execute file modifications, commands, etc. This is a high-risk option.',
-    'danger.settingsTitle': '⚠️ Dangerous Operation Confirmation',
-    'danger.settingsBody': 'Enabling this option will cause Claude Code to skip all permission confirmation dialogs, automatically executing file modifications, command runs, network requests, and more. This means AI can perform any operation without your confirmation, including deleting files or running dangerous commands.\n\nPlease ensure you fully understand the risks before enabling.',
-    'danger.settingsConfirm': 'I understand the risks, enable it',
-    'danger.launchTitle': '⚠️ Launching Without Permission Checks',
-    'danger.launchBody': 'This launch will use the --dangerously-skip-permissions flag. Claude Code will automatically execute all operations without any permission confirmation dialogs.\n\nPlease confirm you want to launch in this mode.',
-    'danger.launchConfirm': 'Confirm Launch',
 
     // ── Close Dialog ──────────────────────────────
     'close.title': 'Close Window',

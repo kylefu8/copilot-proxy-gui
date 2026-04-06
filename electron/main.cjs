@@ -839,7 +839,7 @@ function restartApp() {
 // ─── Launch Claude Code ─────────────────────────────────────────────
 
 async function launchClaudeCode(payload) {
-  const { port, model, smallModel, skipPermissions } = payload || {}
+  const { port, model, smallModel, contextWindow } = payload || {}
   const serverUrl = `http://localhost:${port || 4399}`
 
   // Let user pick a workspace folder
@@ -855,13 +855,20 @@ async function launchClaudeCode(payload) {
 
   const cwd = result.filePaths[0]
 
+  // Append [1m] suffix only for Claude models with >= 1M context window.
+  // This is a Claude Code convention — CC recognizes [1m] to enable 1M context mode,
+  // and strips it before sending the model ID to the API provider.
+  // Only applies to Claude models; non-Claude models (e.g. GPT) should not get this suffix.
+  const isClaude = model && /^claude/i.test(model)
+  const suffix1m = isClaude && contextWindow && contextWindow >= 1000000 ? '[1m]' : ''
   const envVars = {
     ANTHROPIC_BASE_URL: serverUrl,
     ANTHROPIC_AUTH_TOKEN: 'dummy',
-    ANTHROPIC_MODEL: model || '',
-    ANTHROPIC_DEFAULT_SONNET_MODEL: model || '',
-    ANTHROPIC_SMALL_FAST_MODEL: smallModel || model || '',
-    ANTHROPIC_DEFAULT_HAIKU_MODEL: smallModel || model || '',
+    ANTHROPIC_MODEL: (model || '') + suffix1m,
+    ANTHROPIC_DEFAULT_OPUS_MODEL: (model || '') + suffix1m,
+    ANTHROPIC_DEFAULT_SONNET_MODEL: (model || '') + suffix1m,
+    ANTHROPIC_SMALL_FAST_MODEL: (smallModel || model || ''),
+    ANTHROPIC_DEFAULT_HAIKU_MODEL: (smallModel || model || ''),
     DISABLE_NON_ESSENTIAL_MODEL_CALLS: '1',
     CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
   }
@@ -872,8 +879,7 @@ async function launchClaudeCode(payload) {
     const setEnv = Object.entries(envVars)
       .map(([k, v]) => `$env:${k}='${v}'`)
       .join('; ')
-    const claudeCmd = skipPermissions ? 'claude --dangerously-skip-permissions' : 'claude'
-    const psCommand = `${cdCmd}; ${setEnv}; ${claudeCmd}`
+    const psCommand = `${cdCmd}; ${setEnv}; claude`
 
     spawn('cmd.exe', ['/c', 'start', 'powershell.exe', '-NoExit', '-Command', psCommand], {
       detached: true,
@@ -885,7 +891,7 @@ async function launchClaudeCode(payload) {
     const exportEnv = Object.entries(envVars)
       .map(([k, v]) => `export ${k}='${v.replace(/'/g, "'\\''")}'`)
       .join('; ')
-    const script = `cd '${cwd.replace(/'/g, "'\\''")}'  && ${exportEnv} && ${skipPermissions ? 'claude --dangerously-skip-permissions' : 'claude'}`
+    const script = `cd '${cwd.replace(/'/g, "'\\''")}'  && ${exportEnv} && claude`
     const osaScript = `tell application "Terminal"
       activate
       do script "${script.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"
@@ -909,11 +915,13 @@ const CLAUDE_ENV_KEYS = [
   'ANTHROPIC_BASE_URL',
   'ANTHROPIC_AUTH_TOKEN',
   'ANTHROPIC_MODEL',
+  'ANTHROPIC_DEFAULT_OPUS_MODEL',
   'ANTHROPIC_DEFAULT_SONNET_MODEL',
   'ANTHROPIC_SMALL_FAST_MODEL',
   'ANTHROPIC_DEFAULT_HAIKU_MODEL',
   'DISABLE_NON_ESSENTIAL_MODEL_CALLS',
   'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC',
+  'CLAUDE_CODE_AUTO_COMPACT_WINDOW', // legacy: no longer written, but kept for cleanup
 ]
 
 function claudeSettingsPath() {
@@ -938,15 +946,22 @@ function saveClaudeSettings(settings) {
 }
 
 function writeClaudeEnv(payload) {
-  const { port, model, smallModel } = payload || {}
+  const { port, model, smallModel, contextWindow } = payload || {}
   const serverUrl = `http://localhost:${port || 4399}`
+  // Append [1m] suffix only for Claude models with >= 1M context window.
+  // This is a Claude Code convention — CC recognizes [1m] to enable 1M context mode,
+  // and strips it before sending the model ID to the API provider.
+  // Only applies to Claude models; non-Claude models (e.g. GPT) should not get this suffix.
+  const isClaude = model && /^claude/i.test(model)
+  const suffix1m = isClaude && contextWindow && contextWindow >= 1000000 ? '[1m]' : ''
   const envVars = {
     ANTHROPIC_BASE_URL: serverUrl,
     ANTHROPIC_AUTH_TOKEN: 'dummy',
-    ANTHROPIC_MODEL: model || '',
-    ANTHROPIC_DEFAULT_SONNET_MODEL: model || '',
-    ANTHROPIC_SMALL_FAST_MODEL: smallModel || model || '',
-    ANTHROPIC_DEFAULT_HAIKU_MODEL: smallModel || model || '',
+    ANTHROPIC_MODEL: (model || '') + suffix1m,
+    ANTHROPIC_DEFAULT_OPUS_MODEL: (model || '') + suffix1m,
+    ANTHROPIC_DEFAULT_SONNET_MODEL: (model || '') + suffix1m,
+    ANTHROPIC_SMALL_FAST_MODEL: (smallModel || model || ''),
+    ANTHROPIC_DEFAULT_HAIKU_MODEL: (smallModel || model || ''),
     DISABLE_NON_ESSENTIAL_MODEL_CALLS: '1',
     CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
   }

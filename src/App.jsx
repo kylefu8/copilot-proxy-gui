@@ -80,7 +80,10 @@ function AppInner() {
         const status = await checkClaudeEnv()
         if (!status?.written || cancelled) return
 
-        await writeClaudeEnv(config.port, config.defaultModel, config.defaultSmallModel)
+        // Look up context window from models data for the selected model
+        const selectedModel = models?.data?.find(m => m.id === config.defaultModel)
+        const ctxWindow = selectedModel?.capabilities?.limits?.max_context_window_tokens
+        await writeClaudeEnv(config.port, config.defaultModel, config.defaultSmallModel, ctxWindow)
       }
       catch (e) {
         console.warn('Claude config auto-sync failed:', e)
@@ -92,7 +95,7 @@ function AppInner() {
     return () => {
       cancelled = true
     }
-  }, [config.port, config.defaultModel, config.defaultSmallModel])
+  }, [config.port, config.defaultModel, config.defaultSmallModel, models])
 
   // Listen for close-requested from main process (tray close confirmation)
   useEffect(() => {

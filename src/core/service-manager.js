@@ -184,22 +184,21 @@ export async function detectAccountType() {
 /**
  * Launch Claude Code in a new terminal window with Copilot Proxy env vars.
  */
-export async function launchClaudeCode(port, model, smallModel, options = {}) {
+export async function launchClaudeCode(port, model, smallModel, contextWindow) {
   const runtime = getRuntime()
   if (runtime === 'web') {
     return { ok: false, error: 'Requires desktop runtime' }
   }
-  const { skipPermissions } = options
-  return invokeDesktop('launch_claude_code', { port, model, smallModel, skipPermissions })
+  return invokeDesktop('launch_claude_code', { port, model, smallModel, contextWindow })
 }
 
 /**
  * Write Claude Code env vars to Windows user-level environment.
  */
-export async function writeClaudeEnv(port, model, smallModel) {
+export async function writeClaudeEnv(port, model, smallModel, contextWindow) {
   const runtime = getRuntime()
   if (runtime === 'web') return { ok: false }
-  return invokeDesktop('write_claude_env', { port, model, smallModel })
+  return invokeDesktop('write_claude_env', { port, model, smallModel, contextWindow })
 }
 
 /**

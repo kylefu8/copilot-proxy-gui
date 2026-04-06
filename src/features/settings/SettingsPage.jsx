@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { resizeWindow, detectAccountType } from '../../core/service-manager'
 import { useI18n } from '../../core/i18n'
-import { DangerConfirmDialog } from '../main/DangerConfirmDialog'
 
 const accountTypes = ['individual', 'business', 'enterprise']
 
@@ -22,7 +21,6 @@ export function SettingsPage({
   const [loginBusy, setLoginBusy] = useState(false)
   const [loginMessage, setLoginMessage] = useState('')
   const [loginError, setLoginError] = useState('')
-  const [showDangerDialog, setShowDangerDialog] = useState(false)
 
   // Auto-detect account type after login
   const autoDetect = useCallback(async () => {
@@ -238,23 +236,6 @@ export function SettingsPage({
             />
             {t('conv.toggle')}
           </label>
-
-          <label className="checkbox checkbox-danger" title={t('settings.skipPermissionsTooltip')}>
-            <input
-              type="checkbox"
-              checked={!!config.skipPermissions}
-              onChange={e => {
-                if (e.target.checked) {
-                  // Show danger confirmation before enabling
-                  setShowDangerDialog(true)
-                } else {
-                  // Disable directly without confirmation
-                  onChangeConfig('skipPermissions', false)
-                }
-              }}
-            />
-            {t('settings.skipPermissions')}
-          </label>
         </div>
 
         <div className="grid2" style={{ marginTop: 8 }}>
@@ -274,19 +255,6 @@ export function SettingsPage({
         <button type="button" onClick={handleSave}>{t('settings.saveBtn')}</button>
       </div>
       </div>
-
-      {showDangerDialog && (
-        <DangerConfirmDialog
-          title={t('danger.settingsTitle')}
-          body={t('danger.settingsBody')}
-          confirmLabel={t('danger.settingsConfirm')}
-          onConfirm={() => {
-            onChangeConfig('skipPermissions', true)
-            setShowDangerDialog(false)
-          }}
-          onCancel={() => setShowDangerDialog(false)}
-        />
-      )}
     </div>
   )
 }

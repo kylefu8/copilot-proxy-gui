@@ -2,7 +2,17 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { resizeWindow, launchClaudeCode, writeClaudeEnv, clearClaudeEnv, checkClaudeEnv, checkClaudeInstalled, openLogWindow, openConversationWindow, updateLogTheme } from '../../core/service-manager'
 import { themes, applyTheme } from '../../core/config-store'
 import { useI18n } from '../../core/i18n'
-import { DangerConfirmDialog } from './DangerConfirmDialog'
+
+/**
+ * Format context window token count for display.
+ * e.g. 1000000 → "1M", 200000 → "200K", 216000 → "216K"
+ */
+function formatContextWindow(tokens) {
+  if (!tokens) return ''
+  if (tokens >= 1000000) return `${(tokens / 1000000).toFixed(tokens % 1000000 === 0 ? 0 : 1)}M`
+  if (tokens >= 1000) return `${Math.round(tokens / 1000)}K`
+  return String(tokens)
+}
 
 export function MainView({
   config,
@@ -37,7 +47,6 @@ export function MainView({
   const [envWritten, setEnvWritten] = useState(false)
   const [envBusy, setEnvBusy] = useState(false)
   const [claudeInstalled, setClaudeInstalled] = useState(null) // null = checking, true/false = result
-  const [showDangerLaunch, setShowDangerLaunch] = useState(false)
   const [themeOpen, setThemeOpen] = useState(false)
   const themeRef = useRef(null)
   const contentRef = useRef(null)
@@ -48,6 +57,10 @@ export function MainView({
 
   const hasModels = modelOptions.length > 0
   const hasAuth = authStatus?.hasToken
+
+  // Derive context window from selected model's capabilities
+  const selectedModelData = modelOptions.find(m => m.id === config.defaultModel)
+  const contextWindow = selectedModelData?.capabilities?.limits?.max_context_window_tokens
 
   // Check env var status and Claude Code installation on mount
   useEffect(() => {
@@ -217,9 +230,11 @@ export function MainView({
                 disabled={!hasModels || modelsLoading}
               >
                 <option value="">{modelsLoading ? t('loading') : t('model.select')}</option>
-                {modelOptions.map(m => (
-                  <option key={m.id} value={m.id}>{m.id}</option>
-                ))}
+                {modelOptions.map(m => {
+                  const ctx = m.capabilities?.limits?.max_context_window_tokens
+                  const label = ctx ? `${m.id} (${formatContextWindow(ctx)})` : m.id
+                  return <option key={m.id} value={m.id}>{label}</option>
+                })}
               </select>
             </label>
             <label className="model-select-row" title={t('model.smallTooltip')}>
@@ -230,9 +245,11 @@ export function MainView({
                 disabled={!hasModels || modelsLoading}
               >
                 <option value="">{t('model.optional')}</option>
-                {modelOptions.map(m => (
-                  <option key={m.id} value={m.id}>{m.id}</option>
-                ))}
+                {modelOptions.map(m => {
+                  const ctx = m.capabilities?.limits?.max_context_window_tokens
+                  const label = ctx ? `${m.id} (${formatContextWindow(ctx)})` : m.id
+                  return <option key={m.id} value={m.id}>{label}</option>
+                })}
               </select>
             </label>
           </div>
@@ -240,6 +257,11 @@ export function MainView({
           {hasAuth && !hasModels && !modelsLoading && !modelsError && <p className="hint">{t('model.loadingList')}</p>}
           {hasAuth && hasModels && !config.defaultModel && !isRunning && <p className="hint">{t('model.selectFirst')}</p>}
           {modelsError && <p className="error">{modelsError.key === 'tokenExpired' ? t('model.tokenExpired') : t('model.fetchError') + (modelsError.detail || '')}</p>}
+          {contextWindow && contextWindow >= 1000000 && /^claude/i.test(config.defaultModel) && (
+            <p className="hint" style={{ color: 'var(--green)', margin: '4px 0 0' }}>
+              ✅ {t('model.largeContext').replace('{size}', formatContextWindow(contextWindow))}
+            </p>
+          )}
           {isRunning && config.defaultModel && (
             <>
             {claudeInstalled === false && (
@@ -264,13 +286,9 @@ export function MainView({
                 type="button"
                 disabled={claudeLaunching || claudeInstalled === false}
                 onClick={async () => {
-                  if (config.skipPermissions) {
-                    setShowDangerLaunch(true)
-                    return
-                  }
                   setClaudeLaunching(true)
                   try {
-                    const result = await launchClaudeCode(config.port, config.defaultModel, config.defaultSmallModel, { skipPermissions: false })
+                    const result = await launchClaudeCode(config.port, config.defaultModel, config.defaultSmallModel, contextWindow)
                     if (result.canceled) {
                       setClaudeLaunching(false)
                       return
@@ -297,7 +315,7 @@ export function MainView({
                       setEnvWritten(false)
                       showToast(t('claude.clearDone'))
                     } else {
-                      await writeClaudeEnv(config.port, config.defaultModel, config.defaultSmallModel)
+                      await writeClaudeEnv(config.port, config.defaultModel, config.defaultSmallModel, contextWindow)
                       setEnvWritten(true)
                       showToast(t('claude.writeDone'))
                     }
@@ -398,31 +416,6 @@ export function MainView({
 
         </div>
       </div>
-
-      {showDangerLaunch && (
-        <DangerConfirmDialog
-          title={t('danger.launchTitle')}
-          body={t('danger.launchBody')}
-          confirmLabel={t('danger.launchConfirm')}
-          onConfirm={async () => {
-            setShowDangerLaunch(false)
-            setClaudeLaunching(true)
-            try {
-              const result = await launchClaudeCode(config.port, config.defaultModel, config.defaultSmallModel, { skipPermissions: true })
-              if (result.canceled) {
-                setClaudeLaunching(false)
-                return
-              }
-              showToast(t('claude.launched'))
-            } catch (err) {
-              showToast(t('claude.launchFailed') + String(err))
-            } finally {
-              setClaudeLaunching(false)
-            }
-          }}
-          onCancel={() => setShowDangerLaunch(false)}
-        />
-      )}
     </div>
   )
 }
