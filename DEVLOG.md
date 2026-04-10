@@ -1,5 +1,47 @@
 # Development Log
 
+## 2026-04-10 — v0.6.1 upstream upgrade to v0.6.1
+
+### Summary
+
+Major upstream upgrade: embedded copilot-proxy upgraded from v0.4.2 to v0.6.1. Version number aligned with upstream to reduce confusion. Conversation recording middleware rebased onto v0.6.1 base with zero conflicts.
+
+### Upstream changes included (v0.4.2 → v0.6.1)
+
+- `91709e7` feat: support Anthropic document blocks (PDF/text extraction)
+- `1e76b6d` chore: release v0.5.0
+- `03b9dfe` feat: native Anthropic /v1/messages passthrough for Claude models
+- `a1ce201` fix: preserve upstream metadata and abort handling
+- `bb76ab1` Normalize Anthropic and Responses translation semantics
+- `573d793` Route Claude requests around Copilot backend limits
+- `6599c9c` Add Copilot capability probes and coverage
+- `7b0b2c6` fix(messages): align Anthropic contract with Copilot compatibility
+- `4c538e8` fix(openai): align compatibility guards and structured outputs
+- `8c0764e` fix(embeddings): normalize scalar input for Copilot upstream
+- `dcb72f2` test(live): add proxy smoke coverage for official feature surfaces
+- `b0170bf` test(live): extend Copilot capability matrix coverage
+- `145d725` refactor: centralize backend routing and fallback planning
+- `5fbf0cd` fix: restrict backend plans to supported APIs
+- `ec01113` refactor: separate static routing from runtime fallback
+- `ced0029` chore(release): v0.6.0
+- `e57f729` fix: release 0.6.1 abort-signal regression
+
+### Submodule branch management
+
+- Merged `conv-middleware-v061` into submodule `main` (fast-forward)
+- Force-pushed submodule `main` to `origin` (kylefu8/copilot-proxy) to replace stale remote commits
+- Conversation recording middleware cherry-picked cleanly onto v0.6.1 base
+
+### Version alignment
+
+- GUI version bumped from 0.3.7 to 0.6.1 to align with embedded proxy version
+- Reduces user confusion about which proxy version is included
+
+### Reference release
+
+- GUI release: `v0.6.1`
+- Embedded proxy: fork `main` based on upstream v0.6.1 + conversation middleware
+
 ## 2026-03-06 — v0.2.9 release cycle
 
 ### Summary
