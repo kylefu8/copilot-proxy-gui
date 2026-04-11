@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { AboutPage } from './features/about/AboutPage'
 import { CloseDialog } from './features/main/CloseDialog'
+import { ClaudeStaleDialog } from './features/main/ClaudeStaleDialog'
 import { MainView } from './features/main/MainView'
 import { RiskDialog } from './features/main/RiskDialog'
 import { SettingsPage } from './features/settings/SettingsPage'
@@ -16,6 +17,7 @@ import {
   markServiceRunning,
   markServiceStopped,
   checkClaudeEnv,
+  clearClaudeEnv,
   startDeviceCodeAuth,
   startService,
   stopService,
@@ -44,7 +46,7 @@ function AppInner() {
   const pendingStartRef = useRef(false)
   const triggerStartRef = useRef(() => {})
   const configRef = useRef(config)
-  const hasInitializedClaudeSyncRef = useRef(false)
+  const [showClaudeStaleDialog, setShowClaudeStaleDialog] = useState(false)
 
   // Toast notification
   const [toast, setToast] = useState('')
@@ -65,37 +67,22 @@ function AppInner() {
   // Keep configRef in sync so event listeners always see latest config
   useEffect(() => { configRef.current = config }, [config])
 
-  // If Claude Code persistent config already exists, keep it in sync with
-  // the current GUI config whenever model-related settings change.
+  // On mount, check if a previous session left CC config in ~/.claude/settings.json.
+  // If found, ask the user whether to keep (update) or remove it.
   useEffect(() => {
-    if (!hasInitializedClaudeSyncRef.current) {
-      hasInitializedClaudeSyncRef.current = true
-      return
-    }
-
     let cancelled = false
-
-    async function syncClaudePersistentConfig() {
+    async function detectStaleClaudeConfig() {
       try {
         const status = await checkClaudeEnv()
         if (!status?.written || cancelled) return
-
-        // Look up context window from models data for the selected model
-        const selectedModel = models?.data?.find(m => m.id === config.defaultModel)
-        const ctxWindow = selectedModel?.capabilities?.limits?.max_context_window_tokens
-        await writeClaudeEnv(config.port, config.defaultModel, config.defaultSmallModel, ctxWindow)
-      }
-      catch (e) {
-        console.warn('Claude config auto-sync failed:', e)
+        setShowClaudeStaleDialog(true)
+      } catch (e) {
+        console.warn('Claude config stale check failed:', e)
       }
     }
-
-    syncClaudePersistentConfig()
-
-    return () => {
-      cancelled = true
-    }
-  }, [config.port, config.defaultModel, config.defaultSmallModel, models])
+    detectStaleClaudeConfig()
+    return () => { cancelled = true }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Listen for close-requested from main process (tray close confirmation)
   useEffect(() => {
@@ -420,6 +407,24 @@ function AppInner() {
         onMinimize={(remember) => handleCloseResponse('minimize', remember)}
         onQuit={(remember) => handleCloseResponse('quit', remember)}
         onCancel={() => handleCloseResponse('cancel')}
+      />
+    )}
+    {showClaudeStaleDialog && (
+      <ClaudeStaleDialog
+        onKeep={() => {
+          setShowClaudeStaleDialog(false)
+          showToast(t('claude.staleKeep'))
+        }}
+        onRemove={async () => {
+          setShowClaudeStaleDialog(false)
+          try {
+            await clearClaudeEnv()
+            showToast(t('claude.clearDone'))
+          } catch (e) {
+            showToast(t('claude.opFailed') + String(e))
+          }
+        }}
+        onDismiss={() => setShowClaudeStaleDialog(false)}
       />
     )}
     {toast && <div className="toast">{toast}</div>}

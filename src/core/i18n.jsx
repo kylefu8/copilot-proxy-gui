@@ -76,6 +76,11 @@ const translations = {
     'claude.opFailed': '操作失败: ',
     'claude.notInstalled': '⚠️ 未检测到 Claude Code，请先安装: npm install -g @anthropic-ai/claude-code',
     'claude.installLink': '查看安装指南',
+    'claude.staleTitle': '检测到残留配置',
+    'claude.staleBody': '上次运行时写入的代理配置仍留在 ~/.claude/settings.json 中。是否保留？',
+    'claude.staleKeep': '保留配置',
+    'claude.staleRemove': '清除配置',
+    'claude.staleDismiss': '稍后再说',
 
     // ── Usage ─────────────────────────────────────
     'usage.title': '📊 用量',
@@ -275,6 +280,11 @@ const translations = {
     'claude.opFailed': 'Operation failed: ',
     'claude.notInstalled': '⚠️ Claude Code not found. Please install first: npm install -g @anthropic-ai/claude-code',
     'claude.installLink': 'Installation guide',
+    'claude.staleTitle': 'Residual Config Detected',
+    'claude.staleBody': 'Proxy config from a previous session is still in ~/.claude/settings.json. Keep it?',
+    'claude.staleKeep': 'Keep Config',
+    'claude.staleRemove': 'Remove Config',
+    'claude.staleDismiss': 'Decide Later',
 
     // ── Usage ─────────────────────────────────────
     'usage.title': '📊 Usage',

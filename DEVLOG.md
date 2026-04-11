@@ -1,5 +1,37 @@
 # Development Log
 
+## 2026-04-11 — v0.6.2 stale config detection & upstream sync
+
+### Summary
+
+Replace the auto-sync behaviour for Claude Code's `~/.claude/settings.json` with a startup stale-config detection dialog. When the GUI starts, it checks whether a previous session left proxy environment variables in Claude's settings file and shows a dialog letting the user choose to keep, remove, or dismiss. Also includes upstream submodule updates (Claude thinking replay fix, CI improvements).
+
+### Changes
+
+- Removed automatic config sync on model/port change (was in `App.jsx` via `useEffect` watching `config.port`, `config.defaultModel`, etc.)
+- Added `ClaudeStaleDialog.jsx` — new dialog component for residual config prompt
+- Added `clearClaudeEnv` import and wiring in `App.jsx` for the "Remove" action
+- Added i18n keys for stale dialog (title, body, keep, remove, dismiss) in both zh and en
+- Updated `package.json` version to `0.6.2`
+- Updated `copilot-proxy` submodule (upstream fixes: Claude thinking replay, CI runtime bumps)
+
+### Files changed
+
+- `package.json` — version bump to 0.6.2
+- `src/App.jsx` — replaced auto-sync with stale detection dialog
+- `src/features/main/ClaudeStaleDialog.jsx` — new file
+- `src/core/i18n.jsx` — added stale dialog i18n keys
+- `copilot-proxy` — submodule pointer updated
+- `README.md` — updated feature description
+- `RELEASE_NOTES.md` — v0.6.2 release note
+- `RELEASE_NOTES_TEMP.md` — v0.6.2 release note
+- `DEVLOG.md` — this entry
+
+### Reference release
+
+- GUI release: `v0.6.2`
+- Embedded proxy: fork `main` with upstream fixes + conversation middleware
+
 ## 2026-04-10 — v0.6.1 upstream upgrade to v0.6.1
 
 ### Summary

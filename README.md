@@ -29,7 +29,7 @@
 - 自动检测账号类型（个人 / 商业 / 企业）
 - 服务启停，独立日志弹窗窗口（过滤、跟踪/暂停、可调字号、自动换行、主题同步）
 - 模型列表拉取 & 默认模型 / 快速模型选择（选择即保存，主界面支持一键刷新模型列表）
-- Claude Code 集成：一键启动 & 写入/清除 `~/.claude/settings.json` 配置；若已存在持久化配置，切换模型后自动同步
+- Claude Code 集成：一键启动 & 写入/清除 `~/.claude/settings.json` 配置；启动时自动检测上次残留的代理配置并提示保留或清除
 - 用量看板（配额进度条 + 详细数据折叠展示）
 - 对话记录：将经过代理的请求与 AI 回复记录到本地 JSON 文件，内置对话浏览器（按会话/日期分组、全文搜索、批量删除、实时推送、配色/语言同步）
 - 风险声明对话框（首次启动弹出，需接受后方可启动服务）
@@ -140,7 +140,7 @@ A desktop GUI for [copilot-proxy](https://github.com/Jer-y/copilot-proxy), built
 - Auto-detect account type (individual / business / enterprise)
 - Service start/stop, standalone log viewer popup window (filter, follow/pause, adjustable font size, word wrap, theme sync)
 - Model list fetching & default/fast model selection (saves on select, with one-click model refresh on the main screen)
-- Claude Code integration: one-click launch & write/clear `~/.claude/settings.json`; when persistent Claude config already exists, model changes auto-sync
+- Claude Code integration: one-click launch & write/clear `~/.claude/settings.json`; on startup, detects leftover proxy config from previous sessions and prompts to keep or remove
 - Usage dashboard (quota progress bar + collapsible detail view)
 - Conversation recording: save proxy requests and AI responses to local JSON files, with built-in viewer (session/date grouping, full-text search, batch delete, real-time push, theme/language sync)
 - Risk disclaimer dialog (shown on first launch, must accept before starting)
