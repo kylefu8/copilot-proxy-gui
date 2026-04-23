@@ -1,5 +1,35 @@
 # Development Log
 
+## 2026-04-23 — v0.6.3 upstream sync (cache_control passthrough)
+
+### Summary
+
+Upstream sync to copilot-proxy v0.6.3. The main change is that Copilot's native `/v1/messages` endpoint now accepts the top-level `cache_control` field, so the proxy no longer needs to strip it. This benefits Claude Code and other Anthropic SDK clients that rely on prompt caching.
+
+### Upstream changes included (v0.6.2 → v0.6.3)
+
+- `222a78c` Preserve native Anthropic cache control — stops stripping top-level `cache_control` on the native passthrough path
+- `a30c8f0` Release v0.6.3 — version bump + updated capability probes and tests
+
+### Changes
+
+- Updated `copilot-proxy` submodule to v0.6.3 base with conversation middleware rebased (branch `conv-middleware-v063`)
+- Bumped `package.json` version to `0.6.3`
+- Updated release notes and dev log
+
+### Files changed
+
+- `package.json` — version bump to 0.6.3
+- `copilot-proxy` — submodule pointer updated
+- `RELEASE_NOTES.md` — v0.6.3 release note
+- `RELEASE_NOTES_TEMP.md` — v0.6.3 release note
+- `DEVLOG.md` — this entry
+
+### Reference release
+
+- GUI release: `v0.6.3`
+- Embedded proxy: fork `conv-middleware-v063` based on upstream v0.6.3
+
 ## 2026-04-11 — v0.6.2 stale config detection & upstream sync
 
 ### Summary
