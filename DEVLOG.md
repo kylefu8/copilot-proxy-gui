@@ -1,5 +1,57 @@
 # Development Log
 
+## 2026-04-29 — v0.7.3 upstream sync (major simplification)
+
+### Summary
+
+Major upstream sync: embedded copilot-proxy upgraded from v0.6.3 to v0.7.3. Upstream deleted ~3600 net lines, massively simplifying the routing and translation layers. Conversation recording middleware rebased cleanly with zero conflicts.
+
+### Upstream changes included (v0.6.3 → v0.7.3)
+
+- `a2a18ed` feat: align responses proxy with copilot capabilities
+- `dc8f397` docs: capture copilot capability smoke policy
+- `293b1ac` chore: release v0.7.0
+- `71acef0` feat: support Claude Opus 4.7 routing
+- `7e25679` chore: release v0.7.1
+- `cd72e91` fix: accept xhigh Claude effort
+- `2c7c3d3` chore: release v0.7.2
+- `fa78013` fix: preserve xhigh Anthropic effort
+- `7f6704f` Simplify API routing policy
+- `1591624` chore: release v0.7.3
+
+### Key upstream architectural changes
+
+- Deleted `api-probe.ts`, `backend-plan.ts`, `cc-responses-stream.ts`, `cc-to-responses.ts`, `responses-to-cc.ts`, `stream-translation.ts`, `chat-completions-buffer.ts`
+- `routing-policy.ts` massively simplified
+- `messages/handler.ts` and `responses/handler.ts` streamlined
+- Net code reduction: -3600 lines
+
+### Our middleware
+
+- Cherry-picked `conversation-middleware.ts` + `server.ts` 2 lines from previous branch onto v0.7.3 base
+- Zero conflicts — server.ts structure unchanged
+- Fixed two unused variable TS errors (`path` → `_path`) to satisfy stricter checks
+- Fork branch: `conv-middleware-v073` (fc7f821)
+
+### Changes
+
+- Updated `copilot-proxy` submodule to v0.7.3 base with conversation middleware rebased (branch `conv-middleware-v073`)
+- Bumped `package.json` version to `0.7.3`
+- Updated release notes and dev log
+
+### Files changed
+
+- `package.json` — version bump to 0.7.3
+- `copilot-proxy` — submodule pointer updated
+- `RELEASE_NOTES.md` — v0.7.3 release note
+- `RELEASE_NOTES_TEMP.md` — v0.7.3 release note
+- `DEVLOG.md` — this entry
+
+### Reference release
+
+- GUI release: `v0.7.3`
+- Embedded proxy: fork `conv-middleware-v073` based on upstream v0.7.3
+
 ## 2026-04-23 — v0.6.3 upstream sync (cache_control passthrough)
 
 ### Summary
