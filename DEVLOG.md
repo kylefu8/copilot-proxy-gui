@@ -1,5 +1,59 @@
 # Development Log
 
+## 2026-04-30 — v0.7.5 upstream sync (security hardening)
+
+### Summary
+
+Upstream sync: embedded copilot-proxy upgraded from v0.7.3 to v0.7.5. Key changes include default host binding changed to 127.0.0.1 (loopback only), CORS origin validation, token/path security hardening, and messages handler refactoring. Conversation recording middleware cherry-picked cleanly with zero conflicts.
+
+### Upstream changes included (v0.7.3 → v0.7.5)
+
+- `78c63d5` refactor: remove dead anthropic chat translation
+- `bbe494f` Expose request headers via CORS
+- `401ef82` Fix CORS typecheck option
+- `5a92c77` Harden local token exposure defaults
+- `94f1491` refactor: remove anthropic type re-export bridge
+- `13c30a2` refactor messages stream finalization
+- `46b537c` refactor messages request adaptation
+- `32120af` test messages request adaptation
+- `45f9f63` docs: add codex cli smoke guidance
+- `e38640f` chore: release v0.7.4
+- `40d5c6b` fix: harden paths tokens and stream errors
+- `011bd7f` fix: strip unsupported responses service_tier
+- `b47fac7` chore: release v0.7.5
+- `8cda17e` Expand GPT-5.5 Responses live probes
+- `95216a3` Make Copilot live probes model-agnostic
+
+### Host binding change
+
+- Upstream default changed from `0.0.0.0` to `127.0.0.1` (new `security.ts` module)
+- No impact on GUI: we don't pass `--host`, so the new default applies automatically
+- GUI connects via `http://localhost:{port}` which resolves to `127.0.0.1` — fully compatible
+
+### Our middleware
+
+- Cherry-picked onto v0.7.5 base with zero conflicts (server.ts auto-merged)
+- Fork branch: `conv-middleware-v075` (7c1a8a9)
+
+### Changes
+
+- Updated `copilot-proxy` submodule to v0.7.5 base with conversation middleware rebased (branch `conv-middleware-v075`)
+- Bumped `package.json` version to `0.7.5`
+- Updated release notes and dev log
+
+### Files changed
+
+- `package.json` — version bump to 0.7.5
+- `copilot-proxy` — submodule pointer updated
+- `RELEASE_NOTES.md` — v0.7.5 release note
+- `RELEASE_NOTES_TEMP.md` — v0.7.5 release note
+- `DEVLOG.md` — this entry
+
+### Reference release
+
+- GUI release: `v0.7.5`
+- Embedded proxy: fork `conv-middleware-v075` based on upstream v0.7.5
+
 ## 2026-04-29 — v0.7.3 upstream sync (major simplification)
 
 ### Summary
