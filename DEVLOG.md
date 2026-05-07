@@ -1,5 +1,46 @@
 # Development Log
 
+## 2026-05-07 — v0.7.7 upstream sync (advisor tool, abort signal fix)
+
+### Summary
+
+Upstream sync: embedded copilot-proxy upgraded from v0.7.5 to v0.7.7. Key changes include graceful degradation of unsupported Anthropic advisor tool (`advisor_20260301`), stricter model config prefix matching, and a fix for request abort signal handling in the responses proxy. Conversation recording middleware cherry-picked cleanly with zero conflicts.
+
+### Upstream changes included (v0.7.5 → v0.7.7)
+
+- `9e47f93` fix: forward request abort signals upstream
+- `58df42c` fix: degrade unsupported Anthropic advisor tool
+- `3fc98a1` chore: release v0.7.6
+- `64633f0` fix: avoid forwarding request abort signals upstream
+- `8baf52a` chore: release v0.7.7
+- `cc15b5f` docs: record request abort cancellation policy
+
+### Notable changes
+
+- New `AnthropicAdvisorTool` type and schema added; advisor tools are stripped before forwarding to Copilot backend
+- `advisor-tool-2026-03-01` beta feature added to stripped beta features list
+- `getModelConfig` prefix matching now requires a `-` separator (prevents e.g. `gpt-4` matching `gpt-4o` config)
+- `c.req.raw.signal` removed from responses handler fetch — abort signals were causing upstream issues
+
+### Our middleware
+
+- Cherry-picked onto v0.7.7 base with zero conflicts
+- Fork branch: `conv-middleware-v077` (30f099e)
+
+### Changes
+
+- Updated `copilot-proxy` submodule to v0.7.7 base with conversation middleware rebased (branch `conv-middleware-v077`)
+- Bumped `package.json` version to `0.7.7`
+- Updated release notes and dev log
+
+### Files changed
+
+- `package.json` — version bump to 0.7.7
+- `copilot-proxy` — submodule pointer updated
+- `RELEASE_NOTES.md` — v0.7.7 release note
+- `RELEASE_NOTES_TEMP.md` — v0.7.7 release note
+- `DEVLOG.md` — this entry
+
 ## 2026-04-30 — v0.7.5 upstream sync (security hardening)
 
 ### Summary
