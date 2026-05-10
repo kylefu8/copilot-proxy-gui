@@ -1,5 +1,73 @@
 # Development Log
 
+## 2026-05-10 — v0.7.8 upstream sync (security hardening, daemon improvements)
+
+### Summary
+
+Upstream sync: embedded copilot-proxy upgraded from v0.7.7 to v0.7.8. This is a large hardening release with 22 upstream commits covering request body size limits, upstream fetch timeouts, daemon lifecycle improvements (especially on Windows), security fixes, and translation fidelity improvements. Conversation recording middleware cherry-picked cleanly with zero conflicts.
+
+### Upstream changes included (v0.7.7 → v0.7.8)
+
+- `9bdfc3b` docs: clarify false-success policy
+- `4ddab6c` fix: quote generated shell env commands
+- `b5f1ab5` fix: escape usage dashboard data
+- `da32621` test: require explicit live smoke models
+- `ed4fa83` fix: normalize chat completion object fields
+- `3ad6435` chore: refresh dependencies and audit gates
+- `dddac5a` fix: redact auth flow debug secrets
+- `d21d2be` fix: apply request policy to all upstream routes
+- `a892bd5` fix: cap inbound json request bodies
+- `27b7bdd` fix: harden document url fetching
+- `739425d` fix: complete docker release hardening
+- `b48c43b` fix: remove dashboard cdn dependencies
+- `bb0456d` chore: add knip maintenance gate
+- `39c67b3` fix: disable bun server idle timeout
+- `c79920e` fix: add upstream fetch timeouts
+- `a5ecb12` fix: harden request throttling and token refresh
+- `e7d0ad8` fix: harden route streaming responses
+- `5180190` fix: improve anthropic translation fidelity
+- `bb7fad1` fix: harden daemon lifecycle and logs
+- `7a43d76` fix: tighten model and type utilities
+- `3f232a2` docs: refine capability forwarding policy
+- `4c9830c` fix: remove duplicate timeout export
+- `aa6a38d` chore: release v0.7.8
+- `c45dc62` ci: use node 24 for lint workflows
+
+### Notable changes
+
+- New `upstream-fetch.ts` module with `fetchCopilot` / `fetchGitHub` wrappers adding configurable timeouts
+- New `UpstreamTimeoutError` class with 504 responses in both OpenAI and Anthropic error formats
+- JSON body size limit (32 MB default) with streaming body reader in `validate.ts`
+- Daemon log rotation (10 MB / 3 files) in new `log-file.ts`
+- Windows daemon stop via `daemon.stop` file instead of SIGTERM
+- Win32 `isProcessRunning` fallback using `tasklist`
+- macOS launchd `KeepAlive` changed from `true` to `Crashed: true` (only restart on crash)
+- Supervisor now tracks consecutive failures and exits after 10
+- Bun server `idleTimeout: 0` to prevent premature connection drops
+- Dashboard HTML inlined (removed CDN dependencies)
+- Shell quoting hardened for systemd `$` escaping
+- Auth flow debug secrets redacted in logs
+- Request policy (rate limit + manual approval) unified and applied to all routes
+
+### Our middleware
+
+- Cherry-picked onto v0.7.8 base with zero conflicts
+- Fork branch: `conv-middleware-v078` (a59fb4b)
+
+### Changes
+
+- Updated `copilot-proxy` submodule to v0.7.8 base with conversation middleware rebased (branch `conv-middleware-v078`)
+- Bumped `package.json` version to `0.7.8`
+- Updated release notes and dev log
+
+### Files changed
+
+- `package.json` — version bump to 0.7.8
+- `copilot-proxy` — submodule pointer updated
+- `RELEASE_NOTES.md` — v0.7.8 release note
+- `RELEASE_NOTES_TEMP.md` — v0.7.8 release note
+- `DEVLOG.md` — this entry
+
 ## 2026-05-07 — v0.7.7 upstream sync (advisor tool, abort signal fix)
 
 ### Summary
