@@ -53,6 +53,16 @@ Rules:
 • Improved Anthropic ↔ Responses API translation fidelity / 改进 Anthropic ↔ Responses API 翻译保真度
 • Unified request policy (rate limit + manual approval) across all upstream routes / 统一所有上游路由的请求策略
 
+## 🔧 Bug Fixes / 问题修复
+
+• Fixed `undici@8.x` crash on Electron's Node 20 (`markAsUncloneable` not a function) — undici is now excluded from the bundle and uses Node's built-in version / 修复 undici@8.x 在 Electron Node 20 下崩溃的问题，改用 Node 内置版本
+• Fixed conversation middleware body stream conflict with upstream's new `readJsonBodyText` — request body is now cloned before reading / 修复对话记录中间件与上游新 body 读取方式的冲突
+
+## 🚀 Version Rollback / 版本回滚
+
+• Hold Shift and click "Check for Updates" to rollback to any previous version that supports lightweight update / 按住 Shift 点击"检查更新"可回滚到任意支持轻量更新的历史版本
+• Only available in installed mode (not portable) / 仅安装版可用，便携版不支持
+
 ## ⬇️ Download / 下载
 
 | Platform | File | Note |

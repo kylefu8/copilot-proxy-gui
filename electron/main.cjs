@@ -836,6 +836,143 @@ function restartApp() {
   app.quit()
 }
 
+// ─── Version rollback (hidden Shift+Click feature) ──────────────────
+
+const RELEASES_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases`
+
+function isPortableMode() {
+  return process.platform === 'win32' && (
+    process.resourcesPath.includes(path.join('AppData', 'Local', 'Temp')) ||
+    !process.resourcesPath.includes(path.join('AppData', 'Local', 'Programs'))
+  )
+}
+
+async function fetchAvailableVersions() {
+  if (!isPackaged || isPortableMode()) return { versions: [] }
+
+  const currentVersion = require('../package.json').version
+  const res = await httpsGet(RELEASES_URL + '?per_page=30', {
+    'user-agent': `CopilotProxyGUI/${currentVersion}`,
+  }, 15000)
+  if (!res.ok) throw new Error(`GitHub API error: HTTP ${res.status}`)
+
+  const versions = []
+
+  for (const release of res.json) {
+    const version = (release.tag_name || '').replace(/^v/, '')
+    if (!version || version === currentVersion) continue
+    const hasManifest = (release.assets || []).some(a => a.name === 'update-manifest.json')
+    if (!hasManifest) continue
+    versions.push({ version, tagName: release.tag_name })
+  }
+
+  return { versions }
+}
+
+async function rollbackToVersion(targetVersion) {
+  if (!isPackaged || isPortableMode()) {
+    return { error: true, message: 'Rollback not supported in this mode' }
+  }
+  if (updateState.downloading) return { error: true, message: 'Already downloading' }
+
+  updateState = { ...updateState, downloading: true, progress: 0, error: null }
+  notifyUpdateState()
+
+  try {
+  const currentVersion = require('../package.json').version
+  const tagName = targetVersion.startsWith('v') ? targetVersion : `v${targetVersion}`
+
+  const res = await httpsGet(
+    `${RELEASES_URL}/tags/${tagName}`,
+    { 'user-agent': `CopilotProxyGUI/${currentVersion}` },
+    15000,
+  )
+  if (!res.ok) throw new Error(`Failed to fetch release ${tagName}`)
+
+  const release = res.json
+  const releaseAssets = release.assets || []
+
+  // Fetch and verify manifest
+  const manifestAsset = releaseAssets.find(a => a.name === 'update-manifest.json')
+  if (!manifestAsset) throw new Error('Release has no update manifest')
+
+  const mBuf = await httpsDownload(manifestAsset.browser_download_url)
+  const manifest = JSON.parse(mBuf.toString('utf8'))
+  const expectedAssets = manifest.assets || {}
+
+  // Verify Electron compatibility at rollback time
+  const electronVersion = process.versions.electron
+  if (manifest.minElectronVersion && compareVersions(electronVersion, manifest.minElectronVersion) < 0) {
+    throw new Error(`Requires Electron ${manifest.minElectronVersion}+, current is ${electronVersion}`)
+  }
+
+    const resourcesPath = process.resourcesPath
+    let filesDone = 0
+    const filesToUpdate = []
+
+    const bundleAsset = releaseAssets.find(a => a.name === 'copilot-proxy-bundle.mjs')
+    const asarAsset = releaseAssets.find(a => a.name === 'app.asar')
+    if (bundleAsset) filesToUpdate.push({ asset: bundleAsset, key: 'copilot-proxy-bundle.mjs' })
+    if (asarAsset) filesToUpdate.push({ asset: asarAsset, key: 'app.asar' })
+
+    if (filesToUpdate.length === 0) throw new Error('No downloadable assets found')
+
+    const tempDir = path.join(app.getPath('temp'), 'copilot-proxy-update')
+    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true })
+
+    const downloadedFiles = []
+
+    for (const { asset, key } of filesToUpdate) {
+      const progressBase = (filesDone / filesToUpdate.length) * 100
+      const progressRange = 100 / filesToUpdate.length
+
+      const data = await httpsDownload(asset.browser_download_url, (downloaded, total) => {
+        updateState.progress = Math.round(progressBase + (downloaded / total) * progressRange)
+        notifyUpdateState()
+      })
+
+      if (expectedAssets[key]?.sha256) {
+        const hash = crypto.createHash('sha256').update(data).digest('hex')
+        if (hash !== expectedAssets[key].sha256) throw new Error(`SHA256 mismatch for ${key}`)
+      }
+
+      const tempFile = path.join(tempDir, key)
+      if (key.endsWith('.asar')) {
+        originalFs.writeFileSync(tempFile, data)
+      } else {
+        fs.writeFileSync(tempFile, data)
+      }
+      downloadedFiles.push({ tempFile, destFile: path.join(resourcesPath, key), key })
+      filesDone++
+    }
+
+    for (const { tempFile, destFile } of downloadedFiles) {
+      try {
+        originalFs.copyFileSync(tempFile, destFile)
+      } catch (copyErr) {
+        if (process.platform === 'darwin' && (copyErr.code === 'EACCES' || copyErr.code === 'EPERM')) {
+          // Same macOS fallback as applyLightweightUpdate
+          const { execFileSync } = require('node:child_process')
+          execFileSync('cp', [tempFile, destFile])
+        } else {
+          throw copyErr
+        }
+      }
+    }
+
+    try { originalFs.rmSync(tempDir, { recursive: true, force: true }) } catch { /* ignore */ }
+
+    updateState = { ...updateState, downloading: false, progress: 100 }
+    notifyUpdateState()
+
+    return { ok: true, version: targetVersion.replace(/^v/, ''), needRestart: true }
+  } catch (e) {
+    updateState = { ...updateState, downloading: false, error: e.message || String(e) }
+    notifyUpdateState()
+    return { error: true, message: e.message || String(e) }
+  }
+}
+
 // ─── Launch Claude Code ─────────────────────────────────────────────
 
 async function launchClaudeCode(payload) {
@@ -1705,6 +1842,10 @@ ipcMain.handle('copilot-proxy:invoke', async (_event, request) => {
       return checkForUpdates()
     case 'apply_update':
       return applyLightweightUpdate()
+    case 'list_versions':
+      return fetchAvailableVersions()
+    case 'rollback_to_version':
+      return rollbackToVersion(payload?.version)
     case 'restart_app':
       setTimeout(() => restartApp(), 200)
       return { ok: true }

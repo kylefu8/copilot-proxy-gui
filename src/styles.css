@@ -1147,3 +1147,59 @@ pre {
   flex-direction: column;
   gap: 8px;
 }
+
+/* ── Version picker (rollback) ─────────────────────── */
+
+.version-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.version-picker-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.version-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px;
+}
+
+.version-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--fg);
+  transition: background 0.15s;
+}
+
+.version-picker-item:hover {
+  background: var(--hover);
+}
+
+.version-picker-item.selected {
+  background: var(--accent-bg, rgba(59, 130, 246, 0.1));
+}
+
+.version-picker-item input[type="radio"] {
+  margin: 0;
+  accent-color: var(--accent, #3b82f6);
+}
+
+.version-picker-actions {
+  display: flex;
+  gap: 8px;
+}

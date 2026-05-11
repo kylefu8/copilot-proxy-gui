@@ -13,11 +13,16 @@ export function AboutPage({ onBack }) {
   // Update state: 'idle' | 'checking' | 'up-to-date' | 'available' | 'downloading' | 'ready' | 'error' | 'full-needed'
   const [updatePhase, setUpdatePhase] = useState('idle')
   const [updateData, setUpdateData] = useState({})
+  const [versionList, setVersionList] = useState([])
+  const [selectedVersion, setSelectedVersion] = useState(null)
 
   useEffect(() => {
     // Get initial update state (may have been auto-checked on startup)
     window.copilotProxyDesktop?.invoke('get_update_state').then(state => {
-      if (state?.available) {
+      if (state?.downloading) {
+        setUpdatePhase('downloading')
+        setUpdateData(state)
+      } else if (state?.available) {
         setUpdatePhase(state.lightweightPossible ? 'available' : 'full-needed')
         setUpdateData(state)
       }
@@ -58,7 +63,23 @@ export function AboutPage({ onBack }) {
     }
   }
 
-  const handleCheckUpdate = useCallback(async () => {
+  const handleCheckUpdate = useCallback(async (e) => {
+    if (e?.shiftKey) {
+      setUpdatePhase('loading-versions')
+      try {
+        const result = await window.copilotProxyDesktop?.invoke('list_versions')
+        if (result?.versions?.length > 0) {
+          setVersionList(result.versions)
+          setSelectedVersion(null)
+          setUpdatePhase('version-picker')
+        } else {
+          setUpdatePhase('idle')
+        }
+      } catch {
+        setUpdatePhase('idle')
+      }
+      return
+    }
     setUpdatePhase('checking')
     await window.copilotProxyDesktop?.invoke('check_update')
   }, [])
@@ -74,6 +95,16 @@ export function AboutPage({ onBack }) {
   const handleOpenRelease = useCallback(() => {
     if (updateData.releaseUrl) openLink(updateData.releaseUrl)
   }, [updateData.releaseUrl])
+
+  const handleRollback = useCallback(async () => {
+    if (!selectedVersion) return
+    setUpdatePhase('downloading')
+    const result = await window.copilotProxyDesktop?.invoke('rollback_to_version', { version: selectedVersion })
+    if (result?.error) {
+      setUpdateData(prev => ({ ...prev, error: result.message }))
+      setUpdatePhase('error')
+    }
+  }, [selectedVersion])
 
   const isWin = /Win/.test(navigator.platform)
 
@@ -99,10 +130,52 @@ export function AboutPage({ onBack }) {
           <h2>{t('update.title')}</h2>
           <div className="update-section">
             {updatePhase === 'idle' && (
-              <button type="button" className="about-link-btn" onClick={handleCheckUpdate}>
-                <span className="about-link-icon">🔄</span>
-                <div><div className="about-link-title">{t('update.check')}</div></div>
-              </button>
+              <div>
+                <button type="button" className="about-link-btn" onClick={handleCheckUpdate}>
+                  <span className="about-link-icon">🔄</span>
+                  <div><div className="about-link-title">{t('update.check')}</div></div>
+                </button>
+                <p className="update-hint">{t('update.shiftHint')}</p>
+              </div>
+            )}
+
+            {updatePhase === 'loading-versions' && (
+              <div className="update-info">
+                <span className="update-spinner">⏳</span>
+                <span>{t('update.loadingVersions')}</span>
+              </div>
+            )}
+
+            {updatePhase === 'version-picker' && (
+              <div className="version-picker">
+                <h3 className="version-picker-title">{t('update.rollbackTitle')}</h3>
+                <div className="version-picker-list">
+                  {versionList.map(({ version }) => (
+                    <label key={version} className={`version-picker-item${selectedVersion === version ? ' selected' : ''}`}>
+                      <input
+                        type="radio"
+                        name="rollback-version"
+                        checked={selectedVersion === version}
+                        onChange={() => setSelectedVersion(version)}
+                      />
+                      <span>v{version}</span>
+                    </label>
+                  ))}
+                </div>
+                <div className="version-picker-actions">
+                  <button
+                    type="button"
+                    className="update-action-btn update-action-primary"
+                    disabled={!selectedVersion}
+                    onClick={handleRollback}
+                  >
+                    {t('update.rollbackBtn')}{selectedVersion ? ` → v${selectedVersion}` : ''}
+                  </button>
+                  <button type="button" className="update-action-btn" onClick={() => setUpdatePhase('idle')}>
+                    {t('update.rollbackCancel')}
+                  </button>
+                </div>
+              </div>
             )}
 
             {updatePhase === 'checking' && (

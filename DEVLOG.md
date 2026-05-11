@@ -4,7 +4,7 @@
 
 ### Summary
 
-Upstream sync: embedded copilot-proxy upgraded from v0.7.7 to v0.7.8. This is a large hardening release with 22 upstream commits covering request body size limits, upstream fetch timeouts, daemon lifecycle improvements (especially on Windows), security fixes, and translation fidelity improvements. Conversation recording middleware cherry-picked cleanly with zero conflicts.
+Upstream sync: embedded copilot-proxy upgraded from v0.7.7 to v0.7.8. This is a large hardening release with 22 upstream commits covering request body size limits, upstream fetch timeouts, daemon lifecycle improvements (especially on Windows), security fixes, and translation fidelity improvements. Two compatibility issues were found and fixed: undici@8.x crash on Electron's Node 20 and conversation middleware body stream conflict. Added version rollback feature (Shift+Click on Check for Updates).
 
 ### Upstream changes included (v0.7.7 → v0.7.8)
 
@@ -33,37 +33,43 @@ Upstream sync: embedded copilot-proxy upgraded from v0.7.7 to v0.7.8. This is a 
 - `aa6a38d` chore: release v0.7.8
 - `c45dc62` ci: use node 24 for lint workflows
 
-### Notable changes
+### Compatibility fixes
 
-- New `upstream-fetch.ts` module with `fetchCopilot` / `fetchGitHub` wrappers adding configurable timeouts
-- New `UpstreamTimeoutError` class with 504 responses in both OpenAI and Anthropic error formats
-- JSON body size limit (32 MB default) with streaming body reader in `validate.ts`
-- Daemon log rotation (10 MB / 3 files) in new `log-file.ts`
-- Windows daemon stop via `daemon.stop` file instead of SIGTERM
-- Win32 `isProcessRunning` fallback using `tasklist`
-- macOS launchd `KeepAlive` changed from `true` to `Crashed: true` (only restart on crash)
-- Supervisor now tracks consecutive failures and exits after 10
-- Bun server `idleTimeout: 0` to prevent premature connection drops
-- Dashboard HTML inlined (removed CDN dependencies)
-- Shell quoting hardened for systemd `$` escaping
-- Auth flow debug secrets redacted in logs
-- Request policy (rate limit + manual approval) unified and applied to all routes
+- **undici@8.x crash**: upstream bumped undici from 7.16.0 to 8.2.0 which uses `webidl.util.markAsUncloneable` (Node 22+ only). Electron 33 ships Node 20. Fix: mark undici as external in esbuild, use Node's built-in version.
+- **Body stream conflict**: upstream changed `validateBody` to read `c.req.raw.body` directly instead of Hono's cached `c.req.json()`. Our conversation middleware consumed the body via `c.req.json()` before the handler, leaving the raw stream empty. Fix: middleware now uses `c.req.raw.clone().json()`.
+
+### New feature: version rollback
+
+- Shift+Click on "Check for Updates" in About page shows a version picker
+- Lists all releases with `update-manifest.json` asset (lightweight-update capable)
+- Downloads and applies selected version's assets (app.asar + copilot-proxy-bundle.mjs)
+- Only available in installed mode (not portable, not dev)
 
 ### Our middleware
 
-- Cherry-picked onto v0.7.8 base with zero conflicts
-- Fork branch: `conv-middleware-v078` (a59fb4b)
+- Cherry-picked onto v0.7.8 base, then fixed for body stream compat
+- Fork branch: `conv-middleware-v078` (af49973)
 
 ### Changes
 
-- Updated `copilot-proxy` submodule to v0.7.8 base with conversation middleware rebased (branch `conv-middleware-v078`)
+- Updated `copilot-proxy` submodule to v0.7.8 base with conversation middleware rebased and fixed (branch `conv-middleware-v078`)
 - Bumped `package.json` version to `0.7.8`
+- `scripts/bundle-proxy.cjs`: mark undici as external
+- `electron/main.cjs`: added version rollback (fetchAvailableVersions, rollbackToVersion)
+- `src/features/about/AboutPage.jsx`: Shift+Click version picker UI
+- `src/core/i18n.jsx`: rollback i18n keys
+- `src/styles.css`: version picker styles
 - Updated release notes and dev log
 
 ### Files changed
 
 - `package.json` — version bump to 0.7.8
 - `copilot-proxy` — submodule pointer updated
+- `scripts/bundle-proxy.cjs` — undici external
+- `electron/main.cjs` — version rollback feature
+- `src/features/about/AboutPage.jsx` — rollback UI
+- `src/core/i18n.jsx` — rollback translations
+- `src/styles.css` — rollback styles
 - `RELEASE_NOTES.md` — v0.7.8 release note
 - `RELEASE_NOTES_TEMP.md` — v0.7.8 release note
 - `DEVLOG.md` — this entry

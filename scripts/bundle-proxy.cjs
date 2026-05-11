@@ -41,9 +41,13 @@ async function main() {
     alias: {
       '~': path.join(proxyDir, 'src'),
     },
-    // Create a require function for CJS modules bundled into ESM (e.g. clipboardy → run-jxa → execa)
+    // Create a require function for CJS modules bundled into ESM, and polyfill
+    // worker_threads.markAsUncloneable for Node 20 compat (undici@8.x needs Node 21+).
     banner: {
-      js: `import { createRequire as __createRequire } from 'module'; const require = __createRequire(import.meta.url);`,
+      js: [
+        `import { createRequire as __createRequire } from 'module'; const require = __createRequire(import.meta.url);`,
+        `try { const __wt = require('node:worker_threads'); if (!__wt.markAsUncloneable) __wt.markAsUncloneable = function(){}; } catch {}`,
+      ].join('\n'),
     },
     logLevel: 'info',
   })
