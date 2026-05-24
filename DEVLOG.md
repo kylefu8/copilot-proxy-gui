@@ -1,5 +1,39 @@
 # Development Log
 
+## 2026-05-24 - v0.7.9 upstream sync (Codex model catalog compatibility)
+
+### Summary
+
+Upstream sync: embedded copilot-proxy upgraded from v0.7.8 to v0.7.9. This is a focused upstream release adding Codex model catalog compatibility to the models route. The GUI conversation recording middleware was rebased onto the new upstream base with zero conflicts.
+
+### Upstream changes included (v0.7.8 -> v0.7.9)
+
+- `c45dc62` ci: use node 24 for lint workflows
+- `e6898b8` feat: add Codex model catalog compatibility
+- `80c7cec` chore: release v0.7.9
+
+### Our middleware
+
+- Cherry-picked cleanly onto v0.7.9 base
+- Fork branch: `conv-middleware-v079` (ad3e7eb)
+- Local delta remains limited to `src/lib/conversation-middleware.ts` and `src/server.ts`
+
+### Changes
+
+- Updated `copilot-proxy` submodule to v0.7.9 base with conversation middleware rebased (branch `conv-middleware-v079`)
+- Bumped GUI package version to `0.7.9`
+- Aligned `package-lock.json` root package version to `0.7.9`
+- Updated release notes and dev log
+
+### Files changed
+
+- `package.json` - version bump to 0.7.9
+- `package-lock.json` - root version alignment to 0.7.9
+- `copilot-proxy` - submodule pointer updated
+- `RELEASE_NOTES.md` - v0.7.9 release note
+- `RELEASE_NOTES_TEMP.md` - v0.7.9 release note
+- `DEVLOG.md` - this entry
+
 ## 2026-05-10 — v0.7.8 upstream sync (security hardening, daemon improvements)
 
 ### Summary
