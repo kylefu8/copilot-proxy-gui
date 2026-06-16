@@ -1,5 +1,44 @@
 # Development Log
 
+## 2026-06-16 - v0.7.11 upstream sync (Anthropic system messages)
+
+### Summary
+
+Upstream sync: embedded copilot-proxy upgraded from v0.7.9 to v0.7.11. This release includes upstream support for Anthropic system messages. The GUI conversation recording middleware was rebased onto the new upstream base with zero conflicts.
+
+### Upstream changes included (v0.7.9 -> v0.7.11)
+
+- `20faf03` chore: release v0.7.10
+- `ace285f` fix: support Anthropic system messages
+- `c7860d6` chore: release v0.7.11
+
+### Our middleware
+
+- Cherry-picked cleanly onto v0.7.11 base
+- Fork branch: `conv-middleware-v0711` (813c449)
+- Local delta remains limited to `src/lib/conversation-middleware.ts` and `src/server.ts`
+
+### Changes
+
+- Updated `copilot-proxy` submodule to v0.7.11 base with conversation middleware rebased
+- Bumped GUI package/release version to `0.7.11`
+- Updated release notes and dev log
+
+### Validation
+
+- `bun test tests/messages-routing.test.ts tests/messages-error.test.ts tests/translation-anthropic-responses.test.ts tests/model-config.test.ts tests/variant-routing.test.ts` - 140 passed
+- `node scripts/bundle-proxy.cjs` - passed
+- `bun run build` and `bun run lint` in `copilot-proxy` were blocked by local `node_modules` dependency resolution issues after the upstream dependency refresh (`semver`/`acorn` missing paths), not by source changes
+
+### Files changed
+
+- `copilot-proxy` - submodule pointer updated
+- `package.json` - version bump to 0.7.11
+- `package-lock.json` - root version alignment to 0.7.11
+- `RELEASE_NOTES.md` - v0.7.11 release note
+- `RELEASE_NOTES_TEMP.md` - v0.7.11 release note
+- `DEVLOG.md` - this entry
+
 ## 2026-06-16 - v0.7.9.1 large context suffix toggle
 
 ### Summary
