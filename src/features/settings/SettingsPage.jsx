@@ -239,6 +239,15 @@ export function SettingsPage({
             {t('conv.toggle')}
           </label>
 
+          <label className="checkbox" title={t('settings.appendLargeContextSuffixTooltip')}>
+            <input
+              type="checkbox"
+              checked={!!config.appendLargeContextSuffix}
+              onChange={e => onChangeConfig('appendLargeContextSuffix', e.target.checked)}
+            />
+            {t('settings.appendLargeContextSuffix')}
+          </label>
+
           <label className="checkbox checkbox-danger" title={t('settings.skipPermissionsTooltip')}>
             <input
               type="checkbox"

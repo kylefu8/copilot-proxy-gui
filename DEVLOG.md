@@ -1,5 +1,30 @@
 # Development Log
 
+## 2026-06-16 - v0.7.9.1 large context suffix toggle
+
+### Summary
+
+Added an explicit service-parameter switch for the Claude Code `[1m]` model-name suffix. The switch defaults to off, so model names are left unchanged unless the user enables it.
+
+### Changes
+
+- Added `appendLargeContextSuffix` config with default `false`
+- Added a Service Parameters checkbox for auto-appending `[1m]`
+- Gated Claude Code launch/config writes so `[1m]` is appended only when the switch is enabled and the selected Claude model has context window at least 1M
+- Updated GUI release version to `0.7.9.1` while keeping the internal package version SemVer-compatible for electron-builder
+- Updated release notes
+
+### Files changed
+
+- `src/core/config-store.js` - new config default
+- `src/features/settings/SettingsPage.jsx` - service-parameter checkbox
+- `src/features/main/MainView.jsx` - passes the switch through launch/config write calls
+- `src/core/service-manager.js` - IPC payload forwarding
+- `electron/main.cjs` - suffix gating
+- `src/core/i18n.jsx` - localized labels/tooltips
+- `package.json` and `package-lock.json` - SemVer-compatible package version plus release version 0.7.9.1
+- `RELEASE_NOTES.md` and `RELEASE_NOTES_TEMP.md` - v0.7.9.1 notes
+
 ## 2026-05-24 - v0.7.9 upstream sync (Codex model catalog compatibility)
 
 ### Summary

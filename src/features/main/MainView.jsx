@@ -259,7 +259,7 @@ export function MainView({
           {hasAuth && !hasModels && !modelsLoading && !modelsError && <p className="hint">{t('model.loadingList')}</p>}
           {hasAuth && hasModels && !config.defaultModel && !isRunning && <p className="hint">{t('model.selectFirst')}</p>}
           {modelsError && <p className="error">{modelsError.key === 'tokenExpired' ? t('model.tokenExpired') : t('model.fetchError') + (modelsError.detail || '')}</p>}
-          {contextWindow && contextWindow >= 1000000 && /^claude/i.test(config.defaultModel) && (
+          {config.appendLargeContextSuffix && contextWindow && contextWindow >= 1000000 && /^claude/i.test(config.defaultModel) && (
             <p className="hint" style={{ color: 'var(--green)', margin: '4px 0 0' }}>
               ✅ {t('model.largeContext').replace('{size}', formatContextWindow(contextWindow))}
             </p>
@@ -295,7 +295,9 @@ export function MainView({
                   }
                   setClaudeLaunching(true)
                   try {
-                    const result = await launchClaudeCode(config.port, config.defaultModel, config.defaultSmallModel, contextWindow)
+                    const result = await launchClaudeCode(config.port, config.defaultModel, config.defaultSmallModel, contextWindow, {
+                      appendLargeContextSuffix: config.appendLargeContextSuffix,
+                    })
                     if (result.canceled) {
                       setClaudeLaunching(false)
                       return
@@ -322,7 +324,9 @@ export function MainView({
                       setEnvWritten(false)
                       showToast(t('claude.clearDone'))
                     } else {
-                      await writeClaudeEnv(config.port, config.defaultModel, config.defaultSmallModel, contextWindow)
+                      await writeClaudeEnv(config.port, config.defaultModel, config.defaultSmallModel, contextWindow, {
+                        appendLargeContextSuffix: config.appendLargeContextSuffix,
+                      })
                       setEnvWritten(true)
                       showToast(t('claude.writeDone'))
                     }
@@ -435,7 +439,10 @@ export function MainView({
             setShowDangerLaunch(false)
             setClaudeLaunching(true)
             try {
-              const result = await launchClaudeCode(config.port, config.defaultModel, config.defaultSmallModel, contextWindow, { skipPermissions: true })
+              const result = await launchClaudeCode(config.port, config.defaultModel, config.defaultSmallModel, contextWindow, {
+                appendLargeContextSuffix: config.appendLargeContextSuffix,
+                skipPermissions: true,
+              })
               if (result.canceled) {
                 setClaudeLaunching(false)
                 return

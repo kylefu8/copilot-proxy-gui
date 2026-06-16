@@ -189,17 +189,17 @@ export async function launchClaudeCode(port, model, smallModel, contextWindow, o
   if (runtime === 'web') {
     return { ok: false, error: 'Requires desktop runtime' }
   }
-  const { skipPermissions } = options
-  return invokeDesktop('launch_claude_code', { port, model, smallModel, contextWindow, skipPermissions })
+  const { skipPermissions, appendLargeContextSuffix } = options
+  return invokeDesktop('launch_claude_code', { port, model, smallModel, contextWindow, skipPermissions, appendLargeContextSuffix })
 }
 
 /**
  * Write Claude Code env vars to Windows user-level environment.
  */
-export async function writeClaudeEnv(port, model, smallModel, contextWindow) {
+export async function writeClaudeEnv(port, model, smallModel, contextWindow, options = {}) {
   const runtime = getRuntime()
   if (runtime === 'web') return { ok: false }
-  return invokeDesktop('write_claude_env', { port, model, smallModel, contextWindow })
+  return invokeDesktop('write_claude_env', { port, model, smallModel, contextWindow, appendLargeContextSuffix: options.appendLargeContextSuffix })
 }
 
 /**

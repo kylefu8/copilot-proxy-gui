@@ -26,6 +26,7 @@ export const defaultConfig = {
   lang: 'zh',  // static default; overridden by detectSystemLang() on first launch
   closeAction: '',            // '' = ask, 'minimize', 'quit'
   conversationLog: false,     // record proxy conversations to local files
+  appendLargeContextSuffix: false, // append [1m] for Claude Code when selected Claude model has >= 1M context
   skipPermissions: false,     // launch Claude Code with --dangerously-skip-permissions
   riskAcceptedAt: null,       // ISO timestamp when user accepted risk
   riskConfigFingerprint: '',  // fingerprint of config at acceptance time

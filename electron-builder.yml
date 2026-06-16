@@ -31,7 +31,7 @@ nsis:
   oneClick: true
   perMachine: false
   allowToChangeInstallationDirectory: false
-  artifactName: "${productName}-${version}-setup.exe"
+  artifactName: "${productName}-${env.RELEASE_VERSION}-setup.exe"
 
 mac:
   target: dmg
@@ -42,11 +42,11 @@ mac:
 afterPack: scripts/afterPack.cjs
 
 dmg:
-  artifactName: "${productName}-${version}-${arch}.dmg"
+  artifactName: "${productName}-${env.RELEASE_VERSION}-${arch}.dmg"
   writeUpdateInfo: false
 
 portable:
-  artifactName: "${productName}-${version}-portable.exe"
+  artifactName: "${productName}-${env.RELEASE_VERSION}-portable.exe"
 
 # Don't publish anywhere (we upload to GitHub Releases manually or via CI)
 publish: null

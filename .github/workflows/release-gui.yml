@@ -52,6 +52,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Set release version
+        shell: pwsh
+        run: |
+          $pkg = Get-Content package.json | ConvertFrom-Json
+          $version = if ($pkg.releaseVersion) { $pkg.releaseVersion } else { $pkg.version }
+          "RELEASE_VERSION=$version" >> $env:GITHUB_ENV
+
       - name: Install proxy dependencies
         run: cd copilot-proxy && npm install --ignore-scripts --no-package-lock
 
@@ -79,8 +86,9 @@ jobs:
             if (!fs.existsSync(asarPath) || !fs.existsSync(bundlePath)) { console.error('Missing assets'); process.exit(1); }
             const pkg = require('./package.json');
             const ePkg = require('./node_modules/electron/package.json');
+            const version = pkg.releaseVersion || pkg.version;
             const manifest = {
-              version: pkg.version,
+              version,
               minElectronVersion: ePkg.version.split('.')[0] + '.0.0',
               assets: {
                 'app.asar': { size: fs.statSync(asarPath).size, sha256: sha256(asarPath) },
@@ -125,6 +133,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Set release version
+        run: node -e "const pkg = require('./package.json'); console.log('RELEASE_VERSION=' + (pkg.releaseVersion || pkg.version));" >> "$GITHUB_ENV"
 
       - name: Install proxy dependencies
         run: cd copilot-proxy && npm install --ignore-scripts --no-package-lock

@@ -6,6 +6,11 @@ const https = require('node:https')
 const { spawn, spawnSync } = require('node:child_process')
 const crypto = require('node:crypto')
 const { app, BrowserWindow, ipcMain, shell, dialog, Menu, Tray, nativeImage, safeStorage } = require('electron')
+const appPackage = require('../package.json')
+
+function getAppVersion() {
+  return appPackage.releaseVersion || appPackage.version
+}
 
 /**
  * Make an HTTPS POST request using Node.js's native https module.
@@ -629,7 +634,7 @@ function httpsDownload(url, onProgress) {
       const proto = u.protocol === 'https:' ? https : require('node:http')
 
       proto.get(reqUrl, {
-        headers: { 'user-agent': `CopilotProxyGUI/${require('../package.json').version}` },
+        headers: { 'user-agent': `CopilotProxyGUI/${getAppVersion()}` },
       }, (res) => {
         if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
           res.resume()
@@ -663,7 +668,7 @@ function httpsDownload(url, onProgress) {
 }
 
 async function checkForUpdates() {
-  const currentVersion = require('../package.json').version
+  const currentVersion = getAppVersion()
 
   updateState = { ...updateState, checking: true, error: null }
   notifyUpdateState()
@@ -742,7 +747,7 @@ async function applyLightweightUpdate() {
 
   // Fetch release to get asset download URLs
   const res = await httpsGet(UPDATE_CHECK_URL, {
-    'user-agent': `CopilotProxyGUI/${require('../package.json').version}`,
+    'user-agent': `CopilotProxyGUI/${getAppVersion()}`,
   }, 15000)
   if (!res.ok) throw new Error('Failed to fetch release info')
 
@@ -850,7 +855,7 @@ function isPortableMode() {
 async function fetchAvailableVersions() {
   if (!isPackaged || isPortableMode()) return { versions: [] }
 
-  const currentVersion = require('../package.json').version
+  const currentVersion = getAppVersion()
   const res = await httpsGet(RELEASES_URL + '?per_page=30', {
     'user-agent': `CopilotProxyGUI/${currentVersion}`,
   }, 15000)
@@ -879,7 +884,7 @@ async function rollbackToVersion(targetVersion) {
   notifyUpdateState()
 
   try {
-  const currentVersion = require('../package.json').version
+  const currentVersion = getAppVersion()
   const tagName = targetVersion.startsWith('v') ? targetVersion : `v${targetVersion}`
 
   const res = await httpsGet(
@@ -976,7 +981,7 @@ async function rollbackToVersion(targetVersion) {
 // ─── Launch Claude Code ─────────────────────────────────────────────
 
 async function launchClaudeCode(payload) {
-  const { port, model, smallModel, contextWindow, skipPermissions } = payload || {}
+  const { port, model, smallModel, contextWindow, skipPermissions, appendLargeContextSuffix } = payload || {}
   const serverUrl = `http://localhost:${port || 4399}`
 
   // Let user pick a workspace folder
@@ -992,12 +997,12 @@ async function launchClaudeCode(payload) {
 
   const cwd = result.filePaths[0]
 
-  // Append [1m] suffix only for Claude models with >= 1M context window.
+  // Append [1m] suffix only when explicitly enabled for Claude models with >= 1M context window.
   // This is a Claude Code convention — CC recognizes [1m] to enable 1M context mode,
   // and strips it before sending the model ID to the API provider.
   // Only applies to Claude models; non-Claude models (e.g. GPT) should not get this suffix.
   const isClaude = model && /^claude/i.test(model)
-  const suffix1m = isClaude && contextWindow && contextWindow >= 1000000 ? '[1m]' : ''
+  const suffix1m = appendLargeContextSuffix && isClaude && contextWindow && contextWindow >= 1000000 ? '[1m]' : ''
   const envVars = {
     ANTHROPIC_BASE_URL: serverUrl,
     ANTHROPIC_AUTH_TOKEN: 'dummy',
@@ -1085,14 +1090,14 @@ function saveClaudeSettings(settings) {
 }
 
 function writeClaudeEnv(payload) {
-  const { port, model, smallModel, contextWindow } = payload || {}
+  const { port, model, smallModel, contextWindow, appendLargeContextSuffix } = payload || {}
   const serverUrl = `http://localhost:${port || 4399}`
-  // Append [1m] suffix only for Claude models with >= 1M context window.
+  // Append [1m] suffix only when explicitly enabled for Claude models with >= 1M context window.
   // This is a Claude Code convention — CC recognizes [1m] to enable 1M context mode,
   // and strips it before sending the model ID to the API provider.
   // Only applies to Claude models; non-Claude models (e.g. GPT) should not get this suffix.
   const isClaude = model && /^claude/i.test(model)
-  const suffix1m = isClaude && contextWindow && contextWindow >= 1000000 ? '[1m]' : ''
+  const suffix1m = appendLargeContextSuffix && isClaude && contextWindow && contextWindow >= 1000000 ? '[1m]' : ''
   const envVars = {
     ANTHROPIC_BASE_URL: serverUrl,
     ANTHROPIC_AUTH_TOKEN: 'dummy',
@@ -1713,13 +1718,13 @@ function createWindow() {
     height: isMac ? 380 : 340,
     useContentSize: isMac,
     resizable: false,
-    title: `Copilot Proxy GUI v${require('../package.json').version}`,
+    title: `Copilot Proxy GUI v${getAppVersion()}`,
     icon: icons.createAppIcon(),
     webPreferences: {
       preload: preloadPath,
       contextIsolation: true,
       nodeIntegration: false,
-      additionalArguments: [`--app-version=${require('../package.json').version}`],
+      additionalArguments: [`--app-version=${getAppVersion()}`],
     },
   })
 
@@ -1739,14 +1744,14 @@ function createWindow() {
   if (process.env.COPILOT_GUI_DEV === '1') {
     mainWin.loadURL(process.env.VITE_DEV_SERVER_URL || 'http://localhost:5190')
     mainWin.webContents.once('did-finish-load', () => {
-      if (mainWin) mainWin.setTitle(`Copilot Proxy GUI v${require('../package.json').version}`)
+      if (mainWin) mainWin.setTitle(`Copilot Proxy GUI v${getAppVersion()}`)
     })
     return
   }
 
   mainWin.loadFile(path.resolve(__dirname, '..', 'dist', 'index.html'))
   mainWin.webContents.once('did-finish-load', () => {
-    if (mainWin) mainWin.setTitle(`Copilot Proxy GUI v${require('../package.json').version}`)
+    if (mainWin) mainWin.setTitle(`Copilot Proxy GUI v${getAppVersion()}`)
   })
 }
 

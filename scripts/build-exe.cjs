@@ -23,6 +23,9 @@ const path = require('node:path')
 
 const guiDir = path.resolve(__dirname, '..')
 const buildDir = path.join(guiDir, 'build')
+const pkg = require(path.join(guiDir, 'package.json'))
+const releaseVersion = pkg.releaseVersion || pkg.version
+process.env.RELEASE_VERSION = process.env.RELEASE_VERSION || releaseVersion
 
 // ── Platform detection ──────────────────────────────────────────────
 
@@ -117,11 +120,10 @@ const appAsarLocations = [
 const appAsarPath = appAsarLocations.find(f => fs.existsSync(f))
 
 if (appAsarPath && fs.existsSync(proxyBundlePath)) {
-  const { version } = require(path.join(guiDir, 'package.json'))
   const electronPkg = require(path.join(guiDir, 'node_modules', 'electron', 'package.json'))
 
   const manifest = {
-    version,
+    version: releaseVersion,
     minElectronVersion: electronPkg.version.split('.')[0] + '.0.0',
     assets: {
       'app.asar': {
