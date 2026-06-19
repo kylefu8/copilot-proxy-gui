@@ -1,5 +1,59 @@
 # Development Log
 
+## 2026-06-19 - v0.7.15 upstream sync (Claude routing, stream hardening, native autostart)
+
+### Summary
+
+Upstream sync: embedded copilot-proxy upgraded from v0.7.11 to v0.7.15. Upstream did not provide a changelog, so this entry is based on code and test diff analysis. Main changes: hidden Claude variant routing was removed in favor of model normalization, Claude upstream capability coverage was expanded, streaming cancellation/recovery and token logging safety were hardened, and autostart moved toward native service managers on Windows/macOS/Linux. The GUI conversation recording middleware was rebased onto the new upstream base with zero conflicts.
+
+### Upstream changes included (v0.7.11 -> v0.7.15)
+
+- `e5504d5` fix: remove Claude hidden variant routing
+- `4150f9f` feat: expand Claude upstream capability coverage
+- `9a17ede` chore: release v0.7.12
+- `dfc9e57` chore: release v0.7.13
+- `e728625` chore: publish npm from GitHub Actions
+- `6b2223f` fix: harden proxy streaming and token handling
+- `8a82488` Use native service managers for autostart
+
+### Code-analysis changelog
+
+- Removed `src/routes/messages/model-variants.ts` and replaced it with `model-normalization.ts`; Claude context/fast beta features are preserved for upstream instead of routing to hidden local variants
+- Added checks for Anthropic server-side tools so native `/v1/messages` can pass them through while translated Responses routes reject unsupported server-side tools early
+- Added stream cancellation plumbing (`createUpstreamRequestController`) across Anthropic Messages, Chat Completions, and Responses upstream calls
+- Added stream recovery tests and stricter behavior for partially terminated streams, avoiding fabricated success for thinking-only or incomplete tool streams
+- Hardened token exposure paths by rejecting `--show-token` in daemon/supervisor modes and tightening token endpoint locality checks
+- Added native service management helpers and platform implementations for Windows Task Scheduler, macOS launchd, and Linux systemd autostart
+
+### Our middleware
+
+- Cherry-picked cleanly onto v0.7.15 base
+- Fork branch: `conv-middleware-v0715` (5d2893e)
+- Local delta remains limited to `src/lib/conversation-middleware.ts` and `src/server.ts`
+
+### Changes
+
+- Updated `copilot-proxy` submodule to v0.7.15 base with conversation middleware rebased
+- Bumped GUI package/release version to `0.7.15`
+- Updated release notes and dev log based on code diff analysis
+
+### Validation
+
+- `bun test tests/messages-routing.test.ts tests/messages-request-adaptation.test.ts tests/model-normalization.test.ts tests/routing-policy.test.ts tests/stream-translation-recovery.test.ts tests/translation-anthropic-responses.test.ts tests/daemon-enable.test.ts tests/win32-autostart.test.ts tests/linux-autostart.test.ts` - 151 passed
+- `bun run build` in `copilot-proxy` - passed
+- `node scripts/bundle-proxy.cjs` - passed
+- `bun run lint` in `copilot-proxy` was blocked by local `node_modules` dependency resolution (`mlly/node_modules/acorn/index.js` missing), not by source changes
+- `tests/token-security.test.ts` triggered a Bun 1.3.10 Windows runtime panic (`integer does not fit in destination type`) before reporting assertions
+
+### Files changed
+
+- `copilot-proxy` - submodule pointer updated
+- `package.json` - version bump to 0.7.15
+- `package-lock.json` - root version alignment to 0.7.15
+- `RELEASE_NOTES.md` - v0.7.15 release note
+- `RELEASE_NOTES_TEMP.md` - v0.7.15 release note
+- `DEVLOG.md` - this entry
+
 ## 2026-06-16 - v0.7.11 upstream sync (Anthropic system messages)
 
 ### Summary
