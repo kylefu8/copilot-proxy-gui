@@ -1,5 +1,33 @@
 # Development Log
 
+## 2026-06-19 - v0.7.15-2 hotfix update track
+
+### Summary
+
+Published a follow-up GUI hotfix on the `0.7.15-N` track. This keeps the visible upstream-aligned version family at `0.7.15` while allowing clients that already have the `0.7.15-1` numeric suffix comparator to discover and apply `0.7.15-2` through the in-app updater. No upstream copilot-proxy behavior changes are included.
+
+### Changes
+
+- Bumped GUI package/release version to `0.7.15-2`
+- Updated release notes for the follow-up hotfix track
+- Kept the embedded copilot-proxy base at upstream `0.7.15`
+
+### Validation
+
+- `node --check electron/main.cjs` - passed
+- `git diff --check` - passed
+- `npm.cmd run build` - passed
+- `node scripts\bundle-proxy.cjs` - passed
+- `npm.cmd run desktop:build` - passed, generated Windows setup/portable artifacts and `update-manifest.json` with version `0.7.15-2`
+
+### Files changed
+
+- `package.json` - version bump to 0.7.15-2
+- `package-lock.json` - root version alignment to 0.7.15-2
+- `RELEASE_NOTES.md` - v0.7.15-2 release note
+- `RELEASE_NOTES_TEMP.md` - v0.7.15-2 release note
+- `DEVLOG.md` - this entry
+
 ## 2026-06-19 - v0.7.15-1 Claude Code Windows path hotfix
 
 ### Summary
