@@ -410,6 +410,60 @@ function resolveBunExecutable() {
   return null
 }
 
+function resolveClaudeCodeExecutable() {
+  const home = process.env.HOME || process.env.USERPROFILE
+
+  if (process.platform !== 'win32') {
+    const userShell = process.env.SHELL || '/bin/zsh'
+    const cleanEnv = { ...process.env }
+    delete cleanEnv.npm_config_prefix
+
+    const loginResult = spawnSync(userShell, ['-ilc', 'claude --version'], {
+      stdio: 'pipe',
+      timeout: 10000,
+      env: cleanEnv,
+    })
+    if (loginResult.status !== 0) return null
+
+    const whichResult = spawnSync(userShell, ['-ilc', 'which claude'], {
+      stdio: 'pipe',
+      timeout: 5000,
+      env: cleanEnv,
+    })
+
+    return {
+      version: String(loginResult.stdout).trim().split('\n').pop(),
+      path: String(whichResult.stdout).trim().split('\n').pop() || 'claude',
+    }
+  }
+
+  const shellResult = spawnSync('claude', ['--version'], {
+    stdio: 'pipe',
+    shell: true,
+    timeout: 5000,
+  })
+  if (shellResult.status === 0) {
+    return { version: String(shellResult.stdout).trim(), path: 'claude' }
+  }
+
+  const candidates = []
+  if (home) {
+    candidates.push(path.join(home, '.claude-cli', 'claude.exe'))
+    candidates.push(path.join(home, 'AppData', 'Roaming', 'npm', 'claude.cmd'))
+    candidates.push(path.join(home, '.npm-global', 'claude.cmd'))
+  }
+
+  for (const candidate of candidates) {
+    if (!fs.existsSync(candidate)) continue
+    const result = spawnSync(candidate, ['--version'], { stdio: 'pipe', shell: false, timeout: 5000 })
+    if (result.status === 0) {
+      return { version: String(result.stdout).trim(), path: candidate }
+    }
+  }
+
+  return null
+}
+
 // ─── Service management ──────────────────────────────────────────────
 
 function serviceStart(payload) {
@@ -609,10 +663,26 @@ function notifyUpdateState() {
   updateTrayMenu()
 }
 
+function parseComparableVersion(version) {
+  const normalized = String(version).replace(/^v/, '')
+  const [base, suffix = ''] = normalized.split('-', 2)
+  const parts = base.split('.').map(n => Number.parseInt(n, 10))
+  const revision = /^\d+$/.test(suffix)
+    ? Number.parseInt(suffix, 10)
+    : (Number.isFinite(parts[3]) ? parts[3] : 0)
+
+  return [
+    Number.isFinite(parts[0]) ? parts[0] : 0,
+    Number.isFinite(parts[1]) ? parts[1] : 0,
+    Number.isFinite(parts[2]) ? parts[2] : 0,
+    Number.isFinite(revision) ? revision : 0,
+  ]
+}
+
 function compareVersions(a, b) {
-  const pa = String(a).replace(/^v/, '').replace(/-.*$/, '').split('.').map(Number)
-  const pb = String(b).replace(/^v/, '').replace(/-.*$/, '').split('.').map(Number)
-  for (let i = 0; i < 3; i++) {
+  const pa = parseComparableVersion(a)
+  const pb = parseComparableVersion(b)
+  for (let i = 0; i < 4; i++) {
     const va = pa[i] || 0
     const vb = pb[i] || 0
     if (va > vb) return 1
@@ -1015,7 +1085,11 @@ async function launchClaudeCode(payload) {
     CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
   }
 
-  const claudeCmd = skipPermissions ? 'claude --dangerously-skip-permissions' : 'claude'
+  const resolvedClaude = process.platform === 'win32' ? resolveClaudeCodeExecutable() : null
+  const resolvedClaudePath = resolvedClaude?.path || 'claude'
+  const claudeCmd = resolvedClaudePath === 'claude'
+    ? (skipPermissions ? 'claude --dangerously-skip-permissions' : 'claude')
+    : `& '${resolvedClaudePath.replace(/'/g, "''")}'${skipPermissions ? ' --dangerously-skip-permissions' : ''}`
 
   if (process.platform === 'win32') {
     // Windows: open a visible PowerShell window
@@ -1869,57 +1943,8 @@ ipcMain.handle('copilot-proxy:invoke', async (_event, request) => {
       conversationStore.deleteSessions(payload?.sessionIds || [])
       return { ok: true }
     case 'check_claude_installed': {
-      // Check if 'claude' CLI is available
-      // Strategy: use an interactive login shell to resolve the real PATH
-      // (this picks up nvm, fnm, volta, homebrew, etc. from .zshrc/.bashrc)
-      const home = process.env.HOME || process.env.USERPROFILE
-
-      if (process.platform !== 'win32') {
-        // macOS / Linux: spawn interactive login shell to get full PATH
-        const userShell = process.env.SHELL || '/bin/zsh'
-        // Strip npm_config_prefix to avoid nvm compatibility errors
-        const cleanEnv = { ...process.env }
-        delete cleanEnv.npm_config_prefix
-        const loginResult = spawnSync(userShell, ['-ilc', 'claude --version'], {
-          stdio: 'pipe',
-          timeout: 10000,
-          env: cleanEnv,
-        })
-        if (loginResult.status === 0) {
-          const version = String(loginResult.stdout).trim().split('\n').pop()
-          // Also resolve the actual path
-          const whichResult = spawnSync(userShell, ['-ilc', 'which claude'], {
-            stdio: 'pipe',
-            timeout: 5000,
-            env: cleanEnv,
-          })
-          const claudePath = String(whichResult.stdout).trim().split('\n').pop() || 'claude'
-          return { installed: true, version, path: claudePath }
-        }
-      } else {
-        // Windows: try shell: true (inherits cmd PATH), then check known paths
-        const shellResult = spawnSync('claude', ['--version'], {
-          stdio: 'pipe',
-          shell: true,
-          timeout: 5000,
-        })
-        if (shellResult.status === 0) {
-          return { installed: true, version: String(shellResult.stdout).trim(), path: 'claude' }
-        }
-        // Windows fallback: check well-known paths
-        const winCandidates = []
-        if (home) {
-          winCandidates.push(path.join(home, 'AppData', 'Roaming', 'npm', 'claude.cmd'))
-          winCandidates.push(path.join(home, '.npm-global', 'claude.cmd'))
-        }
-        for (const c of winCandidates) {
-          if (!fs.existsSync(c)) continue
-          const r = spawnSync(c, ['--version'], { stdio: 'pipe', shell: false, timeout: 5000 })
-          if (r.status === 0) {
-            return { installed: true, version: String(r.stdout).trim(), path: c }
-          }
-        }
-      }
+      const claude = resolveClaudeCodeExecutable()
+      if (claude) return { installed: true, version: claude.version, path: claude.path }
       return { installed: false }
     }
     case 'open_external': {

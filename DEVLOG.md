@@ -1,5 +1,37 @@
 # Development Log
 
+## 2026-06-19 - v0.7.15-1 Claude Code Windows path hotfix
+
+### Summary
+
+Windows Claude Code detection now supports Anthropic's `%USERPROFILE%\.claude-cli\claude.exe` install layout. The launch path also reuses the detected fallback executable when `claude` is not resolvable from PATH, preventing the GUI from showing Claude Code as installed while the spawned PowerShell cannot start it. The update comparator now treats numeric `-N` suffixes as hotfix revisions so `0.7.15-1` is discoverable from `0.7.15`.
+
+### Changes
+
+- Added `%USERPROFILE%\.claude-cli\claude.exe` to Windows Claude Code fallback detection
+- Reused the resolved fallback executable path when launching Claude Code on Windows
+- Updated version comparison so numeric `-N` suffixes compare after the base version
+- Bumped GUI package/release version to `0.7.15-1`
+
+### Validation
+
+- `node --check electron/main.cjs` - passed
+- `git diff --check` - passed
+- Numeric suffix version comparison smoke test - passed
+- `C:\Users\kylef\.claude-cli\claude.exe --version` - returned `2.1.179 (Claude Code)`
+- `npm.cmd run build` - passed
+- `node scripts\bundle-proxy.cjs` - passed
+- `npm.cmd run desktop:build` - passed, generated Windows setup/portable artifacts and `update-manifest.json` with version `0.7.15-1`
+
+### Files changed
+
+- `electron/main.cjs` - Claude Code path resolution, Windows launch path reuse, and numeric suffix version comparison
+- `package.json` - version bump to 0.7.15-1
+- `package-lock.json` - root version alignment to 0.7.15-1
+- `RELEASE_NOTES.md` - v0.7.15-1 release note
+- `RELEASE_NOTES_TEMP.md` - v0.7.15-1 release note
+- `DEVLOG.md` - this entry
+
 ## 2026-06-19 - v0.7.15 upstream sync (Claude routing, stream hardening, native autostart)
 
 ### Summary
