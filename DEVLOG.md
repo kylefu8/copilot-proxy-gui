@@ -1,5 +1,43 @@
 # Development Log
 
+## 2026-07-10 - v0.7.15-3 GPT-5.6 model config from upstream PR #12
+
+### Summary
+
+Added GPT-5.6 family model routing by cherry-picking Jer-y/copilot-proxy PR #12 onto our `conv-middleware-v0715` fork branch before an upstream release tag is available. The embedded proxy remains based on upstream `v0.7.15` plus local conversation middleware and this model-config patch. Main effect: `gpt-5.6-sol`, `gpt-5.6-luna`, and `gpt-5.6-terra` no longer fall through to the default chat-completions-only config; they resolve to responses-only GPT-5.6 config with thinking mode and `max` reasoning effort support.
+
+### Upstream PR included
+
+- `6e4a55b` / local cherry-pick `c71afbf` - `feat(model-config): add gpt-5.6 family (responses-only)`
+
+### Changes
+
+- Added `gpt-5.6` to `MODEL_CONFIGS` with `supportedApis: ['responses']`
+- Added `max` to GPT-5.6 supported reasoning efforts
+- Added tests for base `gpt-5.6` and variants `gpt-5.6-sol`, `gpt-5.6-luna`, `gpt-5.6-terra`
+- Updated `copilot-proxy` submodule pointer to the patched `conv-middleware-v0715` branch
+- Bumped GUI package/release version to `0.7.15-3`
+
+### Validation
+
+- `bun test tests/model-config.test.ts tests/routing-policy.test.ts tests/models-route.test.ts tests/messages-routing.test.ts tests/messages-request-adaptation.test.ts` in `copilot-proxy` - 83 passed
+- `bun run build` in `copilot-proxy` - passed
+- `git diff --check` - passed
+- `npm.cmd run build` - passed
+- `node scripts\bundle-proxy.cjs` - passed
+- `npm.cmd run desktop:build` - passed, generated Windows setup/portable artifacts and `update-manifest.json` with version `0.7.15-3`
+- Verified `gpt-5.6` is present in both `build\copilot-proxy-bundle.mjs` and `release\copilot-proxy-bundle.mjs`
+- `node --check electron/main.cjs` - passed
+
+### Files changed
+
+- `copilot-proxy` - submodule pointer updated to include GPT-5.6 model config patch
+- `package.json` - version bump to 0.7.15-3
+- `package-lock.json` - root version alignment to 0.7.15-3
+- `RELEASE_NOTES.md` - v0.7.15-3 release note
+- `RELEASE_NOTES_TEMP.md` - v0.7.15-3 release note
+- `DEVLOG.md` - this entry
+
 ## 2026-06-19 - v0.7.15-2 hotfix update track
 
 ### Summary
