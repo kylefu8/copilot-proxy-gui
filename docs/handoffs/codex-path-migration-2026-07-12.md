@@ -4,8 +4,8 @@
 
 - Old path: `E:\SynologyDrive\AI\Projects\copilot-proxy-gui`
 - New path: `E:\AI\Projects\copilot-proxy-gui`
-- Primary thread: `019e573b-95c4-7b71-85f2-84d7b66e0e83`
-- Archived cwd-related thread: `019e5d36-cc65-7aa1-955b-d6484a570e6f`
+- Primary thread: `019e573b-95c4-7b71-85f2-84d7b66e0e83`; title `查看项目类型`; updated `2026-07-10T02:06:47Z`
+- Archived cwd-related thread: `019e5d36-cc65-7aa1-955b-d6484a570e6f`; title `帮我查一下为什么本机做 github.com的解析会失败，我在路由器上做就是好的`; updated `2026-06-14T02:36:24Z`
 - Windows continuation thread: `019f5612-c73d-7960-a527-43852cbed649`
 - Continuation created: `2026-07-12`
 - Parent HEAD: `4f21719d0bf59786bf5221e6a773ec761d3bdd28`
