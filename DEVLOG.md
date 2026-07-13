@@ -21,6 +21,7 @@ Upstream `v0.8.0` requires Node.js `>=22.19.0`. The GUI previously launched its 
 - Bumped GUI package/release version to `0.8.0`
 - Upgraded Electron from `33.4.11` to `41.10.1`
 - Updated the proxy bundle target from Node 20 to Node 24 and removed the obsolete Node 20 polyfill
+- Updated Windows and macOS release jobs from Node 20 to Node 24
 - Updated permanent and temporary release notes for `v0.8.0`
 
 ### Validation
@@ -46,6 +47,7 @@ Upstream `v0.8.0` requires Node.js `>=22.19.0`. The GUI previously launched its 
 - `copilot-proxy` - upstream `v0.8.0` plus rebased conversation middleware
 - `package.json` / `package-lock.json` - version and Electron runtime update
 - `scripts/bundle-proxy.cjs` - Node 24 target and removal of obsolete compatibility shim
+- `.github/workflows/release-gui.yml` - Node 24 release runtime for Electron 41 compatibility
 - `RELEASE_NOTES.md` / `RELEASE_NOTES_TEMP.md` - `v0.8.0` release notes
 - `DEVLOG.md` - this entry
 
