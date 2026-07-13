@@ -110,13 +110,15 @@ function toPNG(canvas) {
 
 // ─── Color constants ───────────────────────────────────────────────
 
-const BG_OUTER  = [0x10, 0x15, 0x25]
-const BG_INNER  = [0x1a, 0x22, 0x40]
-const BG_SHINE  = [0x22, 0x2e, 0x52]
-const ACCENT    = [0x6d, 0x8c, 0xff]
-const WHITE     = [0xff, 0xff, 0xff]
-const BORDER_HL = [0x3a, 0x4e, 0x7a]
-const LENS_FILL = [0x15, 0x1d, 0x38]
+const BG_OUTER    = [0x08, 0x0f, 0x22]
+const BG_INNER    = [0x11, 0x1b, 0x36]
+const BG_SHINE    = [0x1b, 0x2d, 0x55]
+const ACCENT      = [0x6d, 0x8c, 0xff]
+const CYAN        = [0x49, 0xd6, 0xff]
+const VIOLET      = [0x9b, 0x7b, 0xff]
+const WHITE       = [0xff, 0xff, 0xff]
+const BORDER_HL   = [0x54, 0x74, 0xb8]
+const PORTAL_DARK = [0x0c, 0x15, 0x2d]
 
 // ─── Draw icon at any size ─────────────────────────────────────────
 
@@ -130,29 +132,32 @@ function drawIcon(size) {
   fillRoundedRect(canvas, Math.round(3 * s), Math.round(3 * s), size - Math.round(6 * s), size - Math.round(6 * s), Math.round(12 * s), ...BG_INNER)
   fillRoundedRect(canvas, Math.round(4 * s), Math.round(4 * s), size - Math.round(8 * s), Math.round(24 * s), Math.round(10 * s), ...BG_SHINE, 60)
 
-  // Goggles
-  const lensY = 24 * s
-  const lensR = 10 * s
+  // Bidirectional proxy routes: two opposing flows through one gateway.
+  fillCircle(canvas, 32 * s, 32 * s, 20 * s, ...ACCENT, 18)
+  fillCircle(canvas, 32 * s, 32 * s, 13 * s, ...ACCENT, 16)
 
-  fillCircle(canvas, 20 * s, lensY, lensR, ...ACCENT)
-  fillCircle(canvas, 20 * s, lensY, lensR - 2.5 * s, ...LENS_FILL)
-  fillCircle(canvas, 17 * s, lensY - 3 * s, 2.5 * s, ...WHITE, 50)
+  // Upper route flows left to right.
+  drawLine(canvas, 11 * s, 24 * s, 51 * s, 24 * s, 3 * s, ...CYAN, 235)
+  drawLine(canvas, 34 * s, 24 * s, 51 * s, 24 * s, 3 * s, ...VIOLET, 235)
+  drawLine(canvas, 46 * s, 19.5 * s, 52 * s, 24 * s, 2.6 * s, ...VIOLET)
+  drawLine(canvas, 46 * s, 28.5 * s, 52 * s, 24 * s, 2.6 * s, ...VIOLET)
+  fillCircle(canvas, 11 * s, 24 * s, 4 * s, ...CYAN)
+  fillCircle(canvas, 11 * s, 24 * s, 1.4 * s, ...WHITE, 210)
 
-  fillCircle(canvas, 44 * s, lensY, lensR, ...ACCENT)
-  fillCircle(canvas, 44 * s, lensY, lensR - 2.5 * s, ...LENS_FILL)
-  fillCircle(canvas, 41 * s, lensY - 3 * s, 2.5 * s, ...WHITE, 50)
+  // Lower route flows right to left.
+  drawLine(canvas, 53 * s, 40 * s, 13 * s, 40 * s, 3 * s, ...VIOLET, 235)
+  drawLine(canvas, 30 * s, 40 * s, 13 * s, 40 * s, 3 * s, ...CYAN, 235)
+  drawLine(canvas, 18 * s, 35.5 * s, 12 * s, 40 * s, 2.6 * s, ...CYAN)
+  drawLine(canvas, 18 * s, 44.5 * s, 12 * s, 40 * s, 2.6 * s, ...CYAN)
+  fillCircle(canvas, 53 * s, 40 * s, 4 * s, ...VIOLET)
+  fillCircle(canvas, 53 * s, 40 * s, 1.4 * s, ...WHITE, 210)
 
-  fillRoundedRect(canvas, Math.round(29 * s), Math.round(lensY - 2 * s), Math.round(6 * s), Math.round(4 * s), Math.round(1.5 * s), ...ACCENT)
-
-  drawLine(canvas, 8 * s, lensY - 2 * s, 11 * s, lensY, 2.5 * s, ...ACCENT, 150)
-  drawLine(canvas, 53 * s, lensY, 56 * s, lensY - 2 * s, 2.5 * s, ...ACCENT, 150)
-
-  // Arrow
-  const arrowY = 46 * s
-  drawLine(canvas, 16 * s, arrowY, 44 * s, arrowY, 2.5 * s, ...WHITE, 200)
-  drawLine(canvas, 40 * s, arrowY - 5 * s, 47 * s, arrowY, 2.5 * s, ...WHITE, 200)
-  drawLine(canvas, 40 * s, arrowY + 5 * s, 47 * s, arrowY, 2.5 * s, ...WHITE, 200)
-  fillCircle(canvas, 47 * s, arrowY, 5 * s, ...ACCENT, 30)
+  // Central portal sits above both routes and makes the relay point explicit.
+  fillRoundedRect(canvas, Math.round(24 * s), Math.round(10 * s), Math.round(16 * s), Math.round(44 * s), Math.round(8 * s), ...ACCENT, 35)
+  fillRoundedRect(canvas, Math.round(27 * s), Math.round(12 * s), Math.round(10 * s), Math.round(40 * s), Math.round(5 * s), ...ACCENT)
+  fillRoundedRect(canvas, Math.round(30 * s), Math.round(16 * s), Math.max(1, Math.round(4 * s)), Math.round(32 * s), Math.round(2 * s), ...PORTAL_DARK)
+  fillCircle(canvas, 32 * s, 24 * s, 2.5 * s, ...WHITE, 235)
+  fillCircle(canvas, 32 * s, 40 * s, 2.5 * s, ...WHITE, 235)
 
   return canvas
 }
@@ -198,6 +203,11 @@ const icon256 = drawIcon(256)
 const png256 = toPNG(icon256)
 fs.writeFileSync(path.join(buildDir, 'icon.png'), png256)
 console.log(`  ✓ icon.png (256x256, ${(png256.length / 1024).toFixed(1)} KB)`)
+
+// Keep the renderer/web icon in sync with the packaged application icon.
+const publicDir = path.join(__dirname, '..', 'public')
+if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir, { recursive: true })
+fs.writeFileSync(path.join(publicDir, 'icon.png'), png256)
 
 // Generate ICO with multiple sizes
 const icoSizes = [16, 32, 48, 64, 128, 256]

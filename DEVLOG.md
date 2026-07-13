@@ -1,5 +1,39 @@
 # Development Log
 
+## 2026-07-13 - v0.8.0-1 bidirectional gateway icon
+
+### Summary
+
+Replaced the previous goggles-and-arrow application icon with a bidirectional proxy gateway. Cyan and violet routes travel in opposite directions through a central portal, making the request/response relay concept readable without relying on GitHub's Copilot mark. The design keeps the existing dark navy application palette and remains distinct at taskbar and tray sizes.
+
+### Changes
+
+- Reworked the programmatic application icon and Windows multi-resolution icon generator
+- Updated runtime window/taskbar, colored tray, and macOS template icon variants
+- Kept `public/icon.png` generated from the same source design as the packaged icon
+- Bumped GUI package/release version to `0.8.0-1`
+- Kept the embedded `copilot-proxy` at upstream `v0.8.0` plus local conversation middleware; no proxy behavior changed
+
+### Validation
+
+- `node --check electron/icons.cjs` - passed
+- `node --check scripts/generate-icons.cjs` - passed
+- `node scripts/generate-icons.cjs` - passed; generated 256px PNG and 16/32/48/64/128/256px ICO layers
+- Confirmed `public/icon.png` and `build/icon.png` are byte-identical
+- `npm.cmd run desktop:build` - passed; generated Windows setup/portable artifacts and manifest `0.8.0-1`
+- Confirmed the packaged Windows executable contains the new icon resource
+- Packaged GUI smoke - remained running for 6 seconds with three Electron child processes
+- Confirmed manifest app.asar and proxy bundle SHA-256 values match the generated assets
+
+### Files changed
+
+- `electron/icons.cjs` - runtime application and tray icon design
+- `scripts/generate-icons.cjs` - packaged PNG/ICO/macOS source icon design
+- `public/icon.png` - generated renderer/web icon
+- `package.json` / `package-lock.json` - `0.8.0-1` version
+- `RELEASE_NOTES.md` / `RELEASE_NOTES_TEMP.md` - `v0.8.0-1` release notes
+- `DEVLOG.md` - this entry
+
 ## 2026-07-13 - v0.8.0 upstream security and protocol sync
 
 ### Summary

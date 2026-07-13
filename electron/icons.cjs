@@ -2,9 +2,9 @@
  * Programmatic icon generation for Copilot Proxy GUI.
  * Creates polished app icons and tray icons entirely in memory (no external files).
  *
- * Design: Dark navy rounded square with Copilot-inspired pilot goggles (twin lenses)
- *   - Two connected circular lenses in accent blue (representing GitHub Copilot)
- *   - A forward arrow below (representing the proxy relay concept)
+ * Design: Dark navy rounded square with a bidirectional proxy gateway
+ *   - Opposing cyan/violet data routes represent request and response traffic
+ *   - A central illuminated portal represents the local proxy boundary
  *   - Tray variant adds a colored status dot in the bottom-right corner
  */
 
@@ -125,13 +125,15 @@ function toPNG(canvas) {
 
 // ─── Color constants ───────────────────────────────────────────────
 
-const BG_OUTER  = [0x10, 0x15, 0x25]   // dark edge
-const BG_INNER  = [0x1a, 0x22, 0x40]   // navy card
-const BG_SHINE  = [0x22, 0x2e, 0x52]   // subtle top highlight
-const ACCENT    = [0x6d, 0x8c, 0xff]   // blue accent
-const WHITE     = [0xff, 0xff, 0xff]
-const BORDER_HL = [0x3a, 0x4e, 0x7a]   // border highlight
-const LENS_FILL = [0x15, 0x1d, 0x38]   // dark lens interior
+const BG_OUTER    = [0x08, 0x0f, 0x22]   // dark edge
+const BG_INNER    = [0x11, 0x1b, 0x36]   // navy card
+const BG_SHINE    = [0x1b, 0x2d, 0x55]   // subtle top highlight
+const ACCENT      = [0x6d, 0x8c, 0xff]   // gateway blue
+const CYAN        = [0x49, 0xd6, 0xff]   // request-side route
+const VIOLET      = [0x9b, 0x7b, 0xff]   // response-side route
+const WHITE       = [0xff, 0xff, 0xff]
+const BORDER_HL   = [0x54, 0x74, 0xb8]   // border highlight
+const PORTAL_DARK = [0x0c, 0x15, 0x2d]   // gateway interior
 
 // ─── App icon (window + taskbar) ───────────────────────────────────
 
@@ -145,37 +147,32 @@ function createAppIcon() {
   fillRoundedRect(canvas, 3, 3, 58, 58, 12, ...BG_INNER)
   fillRoundedRect(canvas, 4, 4, 56, 24, 10, ...BG_SHINE, 60)
 
-  // ── Copilot goggles (twin connected lenses) ──
-  const lensY = 24
-  const lensR = 10
+  // ── Bidirectional proxy routes ──
+  fillCircle(canvas, 32, 32, 20, ...ACCENT, 18)
+  fillCircle(canvas, 32, 32, 13, ...ACCENT, 16)
 
-  // Left lens — accent ring with dark center
-  fillCircle(canvas, 20, lensY, lensR, ...ACCENT)
-  fillCircle(canvas, 20, lensY, lensR - 2.5, ...LENS_FILL)
-  fillCircle(canvas, 17, lensY - 3, 2.5, ...WHITE, 50)     // glare highlight
+  // Upper route flows left to right.
+  drawLine(canvas, 11, 24, 51, 24, 3, ...CYAN, 235)
+  drawLine(canvas, 34, 24, 51, 24, 3, ...VIOLET, 235)
+  drawLine(canvas, 46, 19.5, 52, 24, 2.6, ...VIOLET)
+  drawLine(canvas, 46, 28.5, 52, 24, 2.6, ...VIOLET)
+  fillCircle(canvas, 11, 24, 4, ...CYAN)
+  fillCircle(canvas, 11, 24, 1.4, ...WHITE, 210)
 
-  // Right lens — accent ring with dark center
-  fillCircle(canvas, 44, lensY, lensR, ...ACCENT)
-  fillCircle(canvas, 44, lensY, lensR - 2.5, ...LENS_FILL)
-  fillCircle(canvas, 41, lensY - 3, 2.5, ...WHITE, 50)     // glare highlight
+  // Lower route flows right to left.
+  drawLine(canvas, 53, 40, 13, 40, 3, ...VIOLET, 235)
+  drawLine(canvas, 30, 40, 13, 40, 3, ...CYAN, 235)
+  drawLine(canvas, 18, 35.5, 12, 40, 2.6, ...CYAN)
+  drawLine(canvas, 18, 44.5, 12, 40, 2.6, ...CYAN)
+  fillCircle(canvas, 53, 40, 4, ...VIOLET)
+  fillCircle(canvas, 53, 40, 1.4, ...WHITE, 210)
 
-  // Bridge connecting the two lenses
-  fillRoundedRect(canvas, 29, lensY - 2, 6, 4, 1.5, ...ACCENT)
-
-  // Strap hints extending from outer edges (like pilot headgear)
-  drawLine(canvas, 8, lensY - 2, 11, lensY, 2.5, ...ACCENT, 150)
-  drawLine(canvas, 53, lensY, 56, lensY - 2, 2.5, ...ACCENT, 150)
-
-  // ── Proxy forward arrow (below goggles) ──
-  const arrowY = 46
-
-  // Arrow shaft
-  drawLine(canvas, 16, arrowY, 44, arrowY, 2.5, ...WHITE, 200)
-  // Arrowhead
-  drawLine(canvas, 40, arrowY - 5, 47, arrowY, 2.5, ...WHITE, 200)
-  drawLine(canvas, 40, arrowY + 5, 47, arrowY, 2.5, ...WHITE, 200)
-  // Subtle glow behind arrowhead tip
-  fillCircle(canvas, 47, arrowY, 5, ...ACCENT, 30)
+  // Central portal sits above both routes and makes the relay point explicit.
+  fillRoundedRect(canvas, 24, 10, 16, 44, 8, ...ACCENT, 35)
+  fillRoundedRect(canvas, 27, 12, 10, 40, 5, ...ACCENT)
+  fillRoundedRect(canvas, 30, 16, 4, 32, 2, ...PORTAL_DARK)
+  fillCircle(canvas, 32, 24, 2.5, ...WHITE, 235)
+  fillCircle(canvas, 32, 40, 2.5, ...WHITE, 235)
 
   return nativeImage.createFromBuffer(toPNG(canvas))
 }
@@ -199,22 +196,23 @@ function createTrayIcon(statusColor) {
   // Subtle top highlight
   fillRoundedRect(canvas, 1, 1, 14, 6, 2.5, ...BG_SHINE, 50)
 
-  // ── Simplified goggles (two small rings) ──
-  // Left lens
-  fillCircle(canvas, 5, 5.5, 3.2, ...ACCENT, 230)
-  fillCircle(canvas, 5, 5.5, 1.6, ...LENS_FILL)
+  // Two compact opposing routes through the central portal.
+  drawLine(canvas, 2.5, 4.5, 12.5, 4.5, 1.3, ...CYAN, 235)
+  drawLine(canvas, 8, 4.5, 12.5, 4.5, 1.3, ...VIOLET, 235)
+  drawLine(canvas, 10.8, 3, 13, 4.5, 1.1, ...VIOLET)
+  drawLine(canvas, 10.8, 6, 13, 4.5, 1.1, ...VIOLET)
+  fillCircle(canvas, 2.5, 4.5, 1.5, ...CYAN)
 
-  // Right lens
-  fillCircle(canvas, 11, 5.5, 3.2, ...ACCENT, 230)
-  fillCircle(canvas, 11, 5.5, 1.6, ...LENS_FILL)
+  drawLine(canvas, 12.5, 9.5, 2.5, 9.5, 1.3, ...VIOLET, 235)
+  drawLine(canvas, 8, 9.5, 2.5, 9.5, 1.3, ...CYAN, 235)
+  drawLine(canvas, 4.2, 8, 2, 9.5, 1.1, ...CYAN)
+  drawLine(canvas, 4.2, 11, 2, 9.5, 1.1, ...CYAN)
+  fillCircle(canvas, 12.5, 9.5, 1.5, ...VIOLET)
 
-  // Bridge
-  drawLine(canvas, 7.5, 5.5, 8.5, 5.5, 1.5, ...ACCENT, 220)
-
-  // Small forward arrow
-  drawLine(canvas, 2.5, 11, 7, 11, 1.2, ...WHITE, 180)
-  drawLine(canvas, 5.5, 9.5, 7.5, 11, 1.2, ...WHITE, 180)
-  drawLine(canvas, 5.5, 12.5, 7.5, 11, 1.2, ...WHITE, 180)
+  fillRoundedRect(canvas, 6, 1, 4, 12, 2, ...ACCENT, 45)
+  fillRoundedRect(canvas, 7, 2, 2, 10, 1, ...ACCENT)
+  fillCircle(canvas, 8, 4.5, 0.8, ...WHITE, 230)
+  fillCircle(canvas, 8, 9.5, 0.8, ...WHITE, 230)
 
   // Status dot — dark outline ring then colored fill
   fillCircle(canvas, 12, 12.5, 3, ...BG_OUTER)      // dark outline
@@ -235,22 +233,18 @@ function createTrayIconTemplate() {
   // All drawing in white — macOS will invert for dark/light menu bar automatically
   const W = [0xff, 0xff, 0xff]
 
-  // ── Simplified goggles (two small rings) ──
-  // Left lens
-  fillCircle(canvas, 7, 8, 4, ...W, 220)
-  fillCircle(canvas, 7, 8, 2, 0, 0, 0, 0)  // transparent center (punch hole)
+  // Monochrome version of the bidirectional gateway mark.
+  drawLine(canvas, 3, 7, 18, 7, 1.8, ...W, 225)
+  drawLine(canvas, 15, 4.5, 19, 7, 1.6, ...W, 225)
+  drawLine(canvas, 15, 9.5, 19, 7, 1.6, ...W, 225)
+  fillCircle(canvas, 3, 7, 2, ...W, 235)
 
-  // Right lens
-  fillCircle(canvas, 15, 8, 4, ...W, 220)
-  fillCircle(canvas, 15, 8, 2, 0, 0, 0, 0)  // transparent center
+  drawLine(canvas, 19, 15, 4, 15, 1.8, ...W, 225)
+  drawLine(canvas, 7, 12.5, 3, 15, 1.6, ...W, 225)
+  drawLine(canvas, 7, 17.5, 3, 15, 1.6, ...W, 225)
+  fillCircle(canvas, 19, 15, 2, ...W, 235)
 
-  // Bridge
-  drawLine(canvas, 10, 8, 12, 8, 1.5, ...W, 200)
-
-  // Small forward arrow below
-  drawLine(canvas, 5, 16, 12, 16, 1.2, ...W, 200)
-  drawLine(canvas, 10, 14, 13, 16, 1.2, ...W, 200)
-  drawLine(canvas, 10, 18, 13, 16, 1.2, ...W, 200)
+  fillRoundedRect(canvas, 9, 2, 4, 18, 2, ...W, 230)
 
   const img = nativeImage.createFromBuffer(toPNG(canvas), { scaleFactor: 2 })
   img.setTemplateImage(true)
