@@ -1,5 +1,54 @@
 # Development Log
 
+## 2026-07-13 - v0.8.0 upstream security and protocol sync
+
+### Summary
+
+Upgraded the embedded `copilot-proxy` from upstream `v0.7.15` to the formal `v0.8.0` release. This includes the official GPT-5.6 model configuration from `v0.7.16`, stricter host/CORS/token controls, clearer rejection of lossy request translations, and native-service lifecycle hardening. The local conversation recording middleware was rebased onto the new upstream base as `conv-middleware-v080`.
+
+Upstream `v0.8.0` requires Node.js `>=22.19.0`. The GUI previously launched its bundled proxy with Electron 33's Node 20 runtime, so Electron was upgraded to `41.10.1` (Node `24.18.0`) and the esbuild target was moved from Node 20 to Node 24. The old `worker_threads.markAsUncloneable` compatibility shim is no longer needed.
+
+### Upstream and local proxy commits
+
+- `ca0a5d1` - upstream `v0.8.0` release
+- `424217d` - reapplied local conversation recording middleware
+- `cee42d9` - reapplied request-cloning compatibility fix
+- `d5a43c9` - aligned the middleware import with the current upstream source layout
+
+### Changes
+
+- Updated the `copilot-proxy` submodule to `conv-middleware-v080` at `d5a43c9`
+- Bumped GUI package/release version to `0.8.0`
+- Upgraded Electron from `33.4.11` to `41.10.1`
+- Updated the proxy bundle target from Node 20 to Node 24 and removed the obsolete Node 20 polyfill
+- Updated permanent and temporary release notes for `v0.8.0`
+
+### Validation
+
+- Focused proxy model/routing/message tests: 115 passed, 0 failed across 5 files
+- Additional proxy security/runtime tests: 31 assertions passed before Bun 1.3.10 crashed in `token-security.test.ts`; the same file reproducibly passes its first assertion and then triggers a Bun Windows integer-conversion panic
+- `tests/proxy.test.ts`: 8 passed, 0 failed
+- Full `bun test` and `tests/start-shutdown.test.ts` were stopped after sustained high CPU with no completion result; neither is recorded as passed
+- `bun run typecheck` - passed
+- `bun run build` - passed after repairing the generated dependency tree's missing `semver@7.7.4`; tracked proxy files and `bun.lock` remained unchanged
+- `bun run lint` - blocked by the generated dependency tree missing `mlly/node_modules/acorn/index.js`, not by a reported source lint error
+- `node --check electron/main.cjs` - passed
+- `npm.cmd run build` - passed
+- `node scripts/bundle-proxy.cjs` - passed with Node 24 target
+- `npm.cmd run desktop:build` - passed; generated setup, portable, app.asar, proxy bundle, and manifest for `0.8.0`
+- `npm.cmd audit --omit=dev` - passed with 0 production vulnerabilities
+- Packaged GUI smoke - remained running for 8 seconds with three Electron child processes; file version `0.8.0`
+- Bundled proxy CLI `--help` - passed under Electron `41.10.1` / Node `24.18.0`
+- Authenticated server smoke could not use the current `gh` OAuth token: GitHub returned 404 for the Copilot internal token endpoint. A dummy token returned the expected 401. No authenticated model request is claimed.
+
+### Files changed
+
+- `copilot-proxy` - upstream `v0.8.0` plus rebased conversation middleware
+- `package.json` / `package-lock.json` - version and Electron runtime update
+- `scripts/bundle-proxy.cjs` - Node 24 target and removal of obsolete compatibility shim
+- `RELEASE_NOTES.md` / `RELEASE_NOTES_TEMP.md` - `v0.8.0` release notes
+- `DEVLOG.md` - this entry
+
 ## 2026-07-10 - v0.7.15-3 GPT-5.6 model config from upstream PR #12
 
 ### Summary
