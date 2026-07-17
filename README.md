@@ -48,7 +48,7 @@
 
 从 [Releases](https://github.com/kylefu8/copilot-proxy-gui/releases) 页面下载：
 
-当前正式版本为 [v0.9.0](https://github.com/kylefu8/copilot-proxy-gui/releases/tag/v0.9.0)。从 `v0.7.5` 升级的完整变化和兼容注意事项见 [RELEASE_NOTES.md](RELEASE_NOTES.md#v090)。
+当前正式版本为 [v0.9.0](https://github.com/kylefu8/copilot-proxy-gui/releases/tag/v0.9.0)。从 `v0.7.15-3` 升级的完整变化和兼容注意事项见 [RELEASE_NOTES.md](RELEASE_NOTES.md#v090)。
 
 - **Windows**：安装版（`-setup.exe`，推荐，支持轻量更新）或便携版（`-portable.exe`）
 - **macOS**：DMG 安装包（arm64 适用于 Apple Silicon，x64 适用于 Intel）
@@ -163,7 +163,7 @@ A desktop GUI for [copilot-proxy](https://github.com/Jer-y/copilot-proxy), built
 
 Download from the [Releases](https://github.com/kylefu8/copilot-proxy-gui/releases) page:
 
-The current stable release is [v0.9.0](https://github.com/kylefu8/copilot-proxy-gui/releases/tag/v0.9.0). See [RELEASE_NOTES.md](RELEASE_NOTES.md#v090) for the complete upgrade path and compatibility notes from `v0.7.5`.
+The current stable release is [v0.9.0](https://github.com/kylefu8/copilot-proxy-gui/releases/tag/v0.9.0). See [RELEASE_NOTES.md](RELEASE_NOTES.md#v090) for the complete upgrade path and compatibility notes from `v0.7.15-3`.
 
 - **Windows**: Installer (`-setup.exe`, recommended, supports lightweight updates) or Portable edition (`-portable.exe`)
 - **macOS**: DMG installer (arm64 for Apple Silicon, x64 for Intel)
