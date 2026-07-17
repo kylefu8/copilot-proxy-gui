@@ -1,5 +1,61 @@
 # Development Log
 
+## 2026-07-17 - v0.9.0 upstream sync and GUI startup compatibility
+
+### Summary
+
+Upgraded the embedded `copilot-proxy` from upstream `v0.8.0` to `v0.9.0` and rebased the local conversation recording middleware onto `conv-middleware-v090`.
+
+Fixed a GUI startup incompatibility introduced by the upstream `0.8+` token lifecycle. The GUI previously appended `--github-token` to every long-running proxy command. Upstream now treats that option as a secure persist-and-exit bootstrap, so the child exited immediately instead of serving requests. The GUI now removes all long and short token arguments and supplies its encrypted token through the supported one-shot `GH_TOKEN` environment input. Upstream consumes and removes that environment value during initialization, so the secret is not retained in long-running argv or persisted as a second plaintext token by the GUI.
+
+The child environment also preserves any user-provided `COPILOT_PROXY_ALLOWED_HOSTS` values and explicitly adds the GUI's actual loopback callers: `localhost`, `127.0.0.1`, and `::1`.
+
+### Upstream and local proxy commits
+
+- `359933a` - upstream `v0.9.0` release
+- `420c39e` - reapplied local conversation recording middleware
+- `529380e` - reapplied request-cloning compatibility fix
+- `0c813dd` - aligned the middleware import with the current upstream source layout
+
+### Changes
+
+- Updated the `copilot-proxy` submodule to `conv-middleware-v090` at `0c813dd`
+- Added a pure proxy launch helper with Node regression tests
+- Removed `-g` / `--github-token` forms from long-running proxy arguments
+- Passed the GUI token through `GH_TOKEN` and merged local Host allowlist entries
+- Excluded Electron test files from packaged `app.asar`
+- Bumped GUI package/release version to `0.9.0`
+- Updated permanent and temporary release notes
+
+### Validation
+
+- GUI proxy-launch regression tests: 4 passed, 0 failed
+- Process-level invalid-token smoke reached Copilot authentication via `GH_TOKEN`, emitted no persist-and-exit message, and did not persist the test secret
+- Focused proxy model/routing/message tests: 132 passed, 0 failed
+- Proxy token/Host tests: 19 passed, 0 failed
+- Proxy health tests: 7 passed, 0 failed
+- Proxy Responses WebSocket tests: 57 passed, 0 failed
+- Total focused proxy tests: 215 passed, 0 failed
+- `bun run build` followed by `bun run typecheck` - passed
+- `bun run lint` - blocked by the generated dependency tree missing `mlly/node_modules/acorn/index.js`, not by a reported source lint error
+- `concurrency-limiter.test.ts` and `copilot-auth-recovery.test.ts` were stopped after sustained high CPU with no result under Bun 1.3.10 on Windows; neither is recorded as passed
+- `npm.cmd run build` - passed
+- `node scripts/bundle-proxy.cjs` - passed; bundle includes the `v0.9.0` WebSocket transport
+- `npm.cmd run desktop:build` - passed; generated Windows setup/portable artifacts and manifest `0.9.0`
+- Confirmed `proxy-launch.cjs` is packaged and `proxy-launch.test.cjs` is excluded from `app.asar`
+- Packaged GUI smoke - remained running for 6 seconds
+- Confirmed manifest app.asar and proxy bundle SHA-256 values match the generated assets
+
+### Files changed
+
+- `copilot-proxy` - upstream `v0.9.0` plus rebased conversation middleware
+- `electron/main.cjs` - safe long-running token and Host environment integration
+- `electron/proxy-launch.cjs` / `electron/proxy-launch.test.cjs` - launch normalization and regression coverage
+- `electron-builder.yml` - exclude test files from packaged app
+- `package.json` / `package-lock.json` - version and test script
+- `RELEASE_NOTES.md` / `RELEASE_NOTES_TEMP.md` - `v0.9.0` release notes
+- `DEVLOG.md` - this entry
+
 ## 2026-07-13 - v0.8.0-1 bidirectional gateway icon
 
 ### Summary

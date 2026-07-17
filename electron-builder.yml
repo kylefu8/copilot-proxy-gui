@@ -9,6 +9,7 @@ directories:
 # Files included in the asar archive
 files:
   - electron/**/*
+  - "!electron/**/*.test.cjs"
   - dist/**/*
   - "!node_modules"
 

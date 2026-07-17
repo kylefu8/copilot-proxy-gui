@@ -7,6 +7,7 @@ const { spawn, spawnSync } = require('node:child_process')
 const crypto = require('node:crypto')
 const { app, BrowserWindow, ipcMain, shell, dialog, Menu, Tray, nativeImage, safeStorage } = require('electron')
 const appPackage = require('../package.json')
+const { buildProxyLaunch } = require('./proxy-launch.cjs')
 
 function getAppVersion() {
   return appPackage.releaseVersion || appPackage.version
@@ -474,13 +475,20 @@ function serviceStart(payload) {
     }
   }
 
-  const args = Array.isArray(payload?.args) ? [...payload.args] : ['start', '--port', '4399']
+  const requestedArgs = Array.isArray(payload?.args) ? payload.args : ['start', '--port', '4399']
 
-  // Inject decrypted token so the CLI doesn't need to read the (now encrypted) token file
+  // copilot-proxy 0.8+ treats --github-token as a persist-and-exit bootstrap
+  // option. Pass the GUI's decrypted token through GH_TOKEN instead; upstream
+  // consumes and removes it from the long-running process environment.
   const token = readToken()
-  if (token && !args.includes('--github-token')) {
-    args.push('--github-token', token)
-  }
+  const launch = buildProxyLaunch({
+    args: requestedArgs,
+    token,
+    baseEnv: process.env,
+    conversationLog: payload?.conversationLog,
+  })
+  const args = launch.args
+  const proxyEnv = launch.env
 
   // Remember payload & model for tray "Start" replay and tooltip
   lastServicePayload = payload
@@ -488,8 +496,6 @@ function serviceStart(payload) {
 
   serviceLogs = []
   stdoutLineBuffer = ''
-
-  const convLogEnv = payload?.conversationLog ? { COPILOT_PROXY_CONVERSATION_LOG: '1' } : {}
 
   if (isPackaged) {
     // Prefer JS bundle (lightweight) over legacy bun-compiled binary
@@ -506,7 +512,7 @@ function serviceStart(payload) {
           stdio: ['ignore', 'pipe', 'pipe'],
           windowsHide: true,
           shell: false,
-          env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', ...convLogEnv },
+          env: { ...proxyEnv, ELECTRON_RUN_AS_NODE: '1' },
         },
       )
     } else if (fs.existsSync(legacyBinaryPath)) {
@@ -518,7 +524,7 @@ function serviceStart(payload) {
           stdio: ['ignore', 'pipe', 'pipe'],
           windowsHide: true,
           shell: false,
-          env: { ...process.env, ...convLogEnv },
+          env: proxyEnv,
         },
       )
     } else {
@@ -536,7 +542,7 @@ function serviceStart(payload) {
           stdio: ['ignore', 'pipe', 'pipe'],
           windowsHide: true,
           shell: false,
-          env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', ...convLogEnv },
+          env: { ...proxyEnv, ELECTRON_RUN_AS_NODE: '1' },
         },
       )
     } else if (repoRoot) {
@@ -553,7 +559,7 @@ function serviceStart(payload) {
           stdio: ['ignore', 'pipe', 'pipe'],
           windowsHide: true,
           shell: false,
-          env: { ...process.env, ...convLogEnv },
+          env: proxyEnv,
         },
       )
     } else {

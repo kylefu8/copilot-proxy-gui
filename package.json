@@ -1,8 +1,8 @@
 {
   "name": "copilot-proxy-gui",
   "private": true,
-  "version": "0.8.0-1",
-  "releaseVersion": "0.8.0-1",
+  "version": "0.9.0",
+  "releaseVersion": "0.9.0",
   "description": "Desktop GUI for copilot-proxy — Electron + React + Vite",
   "type": "module",
   "main": "electron/main.cjs",
@@ -15,6 +15,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "test:electron": "node --test electron/*.test.cjs",
     "preview": "vite preview",
     "desktop:dev": "concurrently -k \"vite\" \"wait-on tcp:5190 && cross-env COPILOT_GUI_DEV=1 electron ./electron/main.cjs\"",
     "desktop:start": "cross-env COPILOT_GUI_DEV=0 electron ./electron/main.cjs",
