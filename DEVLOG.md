@@ -1,5 +1,22 @@
 # Development Log
 
+## 2026-07-17 - consolidate the public v0.9.0 upgrade path
+
+### Summary
+
+Retired the intermediate GitHub Releases `v0.8.0` and `v0.8.0-1` so the public download path moves directly from the maintained `v0.7.x` line to `v0.9.0`. Their Git tags, commits, permanent historical release-note entries, and detailed development records remain intact.
+
+Rewrote the public `v0.9.0` release note as a consolidated upgrade guide from `v0.7.5` through `v0.9.0`, covering accumulated proxy protocol/model changes, security and reliability work, GUI improvements, and the breaking Token/Host deployment semantics introduced in `0.8+`.
+
+### Documentation updates
+
+- `RELEASE_NOTES.md` - consolidated current `v0.9.0` section and `v0.7.5...v0.9.0` changelog link
+- `RELEASE_NOTES_TEMP.md` - matching GitHub Release body
+- `README.md` - current stable release link, Electron 41 / Node 24 stack, and GUI Token/Host integration behavior
+- `DEVLOG.md` - this durable record of the Release cleanup
+
+The dated Codex path-migration handoff remains unchanged because its `Latest release: v0.7.15-3` field is an intentionally historical snapshot from 2026-07-12.
+
 ## 2026-07-17 - v0.9.0 upstream sync and GUI startup compatibility
 
 ### Summary

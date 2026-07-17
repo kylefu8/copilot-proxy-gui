@@ -48,6 +48,8 @@
 
 从 [Releases](https://github.com/kylefu8/copilot-proxy-gui/releases) 页面下载：
 
+当前正式版本为 [v0.9.0](https://github.com/kylefu8/copilot-proxy-gui/releases/tag/v0.9.0)。从 `v0.7.5` 升级的完整变化和兼容注意事项见 [RELEASE_NOTES.md](RELEASE_NOTES.md#v090)。
+
 - **Windows**：安装版（`-setup.exe`，推荐，支持轻量更新）或便携版（`-portable.exe`）
 - **macOS**：DMG 安装包（arm64 适用于 Apple Silicon，x64 适用于 Intel）
 
@@ -88,12 +90,14 @@ npm run desktop:build
 ### 技术栈
 
 - 前端：React 18 + Vite 5
-- 桌面壳：Electron 33
+- 桌面壳：Electron 41（内置 Node.js 24）
 - 代理服务：[copilot-proxy](https://github.com/Jer-y/copilot-proxy)（git submodule）
 
 ### 代理服务联动
 
 GUI 默认请求本地 `http://localhost:4399`，可在设置页修改端口。
+
+GUI 会通过一次性 `GH_TOKEN` 环境输入把加密保存的 Token 传给代理，不会在长期运行参数中保留 `-g/--github-token`。启动时会显式允许 `localhost`、`127.0.0.1` 和 `::1`，并保留用户已有的 `COPILOT_PROXY_ALLOWED_HOSTS`。非回环部署仍需按实际域名、Docker 服务名或反向代理 Host 自行设置该变量。
 
 关闭窗口时会自动停止 proxy 子进程。
 
@@ -159,6 +163,8 @@ A desktop GUI for [copilot-proxy](https://github.com/Jer-y/copilot-proxy), built
 
 Download from the [Releases](https://github.com/kylefu8/copilot-proxy-gui/releases) page:
 
+The current stable release is [v0.9.0](https://github.com/kylefu8/copilot-proxy-gui/releases/tag/v0.9.0). See [RELEASE_NOTES.md](RELEASE_NOTES.md#v090) for the complete upgrade path and compatibility notes from `v0.7.5`.
+
 - **Windows**: Installer (`-setup.exe`, recommended, supports lightweight updates) or Portable edition (`-portable.exe`)
 - **macOS**: DMG installer (arm64 for Apple Silicon, x64 for Intel)
 
@@ -199,12 +205,14 @@ Output is in the `release/` directory.
 ### Tech Stack
 
 - Frontend: React 18 + Vite 5
-- Desktop shell: Electron 33
+- Desktop shell: Electron 41 (bundled Node.js 24)
 - Proxy service: [copilot-proxy](https://github.com/Jer-y/copilot-proxy) (git submodule)
 
 ### Proxy Integration
 
 The GUI connects to local `http://localhost:4399` by default. The port can be changed in Settings.
+
+The GUI supplies its encrypted token through the one-shot `GH_TOKEN` environment input and never keeps `-g/--github-token` in the long-running command line. It explicitly allows `localhost`, `127.0.0.1`, and `::1` while preserving existing `COPILOT_PROXY_ALLOWED_HOSTS` entries. Non-loopback deployments must still configure that variable for the actual domain, Docker service name, or reverse-proxy Host.
 
 The proxy child process is automatically stopped when the window is closed.
 
