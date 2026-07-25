@@ -326,7 +326,7 @@ Expected: only release-scoped files plus the two known untracked local-only file
 
 ---
 
-### Task 4: Commit, Publish, and Verify GitHub Release
+### Task 4: Commit, Fast-forward Main, Publish, and Verify GitHub Release
 
 **Files:**
 - Commit: parent release-scoped files and submodule pointer
@@ -334,27 +334,36 @@ Expected: only release-scoped files plus the two known untracked local-only file
 
 **Interfaces:**
 - Consumes: all verified local artifacts and remote `conv-middleware-v093`
-- Produces: latest GitHub Release `v0.9.3` with seven verified assets
+- Produces: fast-forwarded parent `main` and latest GitHub Release `v0.9.3` with seven verified assets
 
 - [ ] **Step 1: Stage only release files and commit**
 
 Stage the submodule pointer, package metadata, release notes, devlog, and any current documentation changed by Task 2. Confirm the two local-only files remain untracked.
 
-Run:
+Run in the isolated worktree:
 
 ```powershell
 git diff --cached --check
 git commit -m "release: v0.9.3"
-git push origin main
 ```
+
+Then fast-forward the primary checkout, whose only worktree entries must still be the two known local-only files:
+
+```powershell
+git -C E:\AI\Projects\copilot-proxy-gui status --short --branch --untracked-files=all
+git -C E:\AI\Projects\copilot-proxy-gui merge --ff-only codex/copilot-proxy-v093-sync
+git -C E:\AI\Projects\copilot-proxy-gui push origin main
+```
+
+Expected: primary `main` points to the release commit; no local-only file is staged or changed.
 
 - [ ] **Step 2: Create and push the release tag**
 
-Run:
+Run in the primary checkout after the fast-forward:
 
 ```powershell
-git tag -a v0.9.3 -m "v0.9.3"
-git push origin v0.9.3
+git -C E:\AI\Projects\copilot-proxy-gui tag -a v0.9.3 -m "v0.9.3"
+git -C E:\AI\Projects\copilot-proxy-gui push origin v0.9.3
 ```
 
 Expected: tag resolves to the parent release commit.
