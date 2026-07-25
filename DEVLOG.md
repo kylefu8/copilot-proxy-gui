@@ -1,5 +1,59 @@
 # Development Log
 
+## 2026-07-25 - v0.9.3 upstream sync
+
+### Summary
+
+Upgraded the embedded `copilot-proxy` directly from upstream `v0.9.0` to `v0.9.3`, skipping intermediate GUI releases. The sync includes the `v0.9.1` setup/doctor/models/diagnostics and service-hardening work, `v0.9.2` Claude Opus 5 and Claude Code 1M compatibility, and the `v0.9.3` Anthropic idle-SSE keepalive fix. The local conversation recording middleware remains the only proxy customization.
+
+### Upstream and local proxy commits
+
+- `489b7ed` - upstream `v0.9.3` release
+- `a72fa3f` - reapplied local conversation recording middleware
+- `417c31a` - reapplied request-cloning compatibility fix
+- `01c2032` - aligned the middleware import with the current upstream source layout
+
+### Changes
+
+- Updated the proxy fork to `conv-middleware-v093` at `01c2032`
+- Preserved a two-file proxy delta: `src/lib/conversation-middleware.ts` and `src/server.ts`
+- Bumped GUI package/release version to `0.9.3`
+- Added `v0.9.3` permanent and GitHub release notes
+- Updated README current-version links to `v0.9.3`
+- Preserved Electron `41.10.1`, Node 24 bundling, `GH_TOKEN`, local Host allowlisting, conversation recording, and the existing GUI feature surface
+
+### Validation
+
+- Core model/routing/Messages tests: 143 passed, 0 failed
+- Token argv and server setup tests: 25 passed, 0 failed
+- Health route tests: 9 passed, 0 failed
+- Responses WebSocket tests: 58 passed, 0 failed
+- Setup/doctor/models/product/normalization/SSE tests: 98 passed, 0 failed
+- Total clean focused proxy tests: 333 passed, 0 failed
+- `bun run build` followed by `bun run typecheck` - passed after repairing the generated `node_modules` copy of `semver@7.7.4`; tracked proxy files and `bun.lock` remained unchanged
+- `cors.test.ts` reproducibly triggered a Bun 1.3.10 Windows integer-conversion panic after its first assertion
+- One `client-setup.test.ts` shell-matrix case could not run because `pwsh` is not installed on this machine
+- One `package-documentation.test.ts` anchor case failed because Git's Windows CRLF checkout is not accepted by the upstream LF-only heading regex; the upstream Markdown heading and link are present and the proxy fork does not modify documentation
+- `bun run lint` remained blocked by the generated dependency tree missing `mlly/node_modules/acorn/index.js`
+- Full `bun test` was stopped after the bounded 180-second window with sustained high CPU and no result; it is not recorded as passed
+- Electron main/helper syntax checks and GUI launch regressions: 4 passed, 0 failed
+- `npm.cmd run build` and `node scripts/bundle-proxy.cjs` - passed
+- Verified the bundle contains Claude Opus 5, doctor, Host allowlist, Responses streaming, and Anthropic SSE keepalive markers
+- `npm.cmd run desktop:build` - passed; generated Windows setup/portable artifacts, app.asar, proxy bundle, and manifest `0.9.3`
+- Confirmed manifest app.asar and bundle SHA-256 values match generated assets; setup and portable file versions are `0.9.3`
+- Confirmed `proxy-launch.cjs` is packaged and its test file is excluded from app.asar
+- Packaged GUI smoke remained running for six seconds with three Electron child processes
+- Invalid-token bundle smoke consumed `GH_TOKEN`, emitted no persist-and-exit message, persisted no secret, and reached Copilot authentication
+- `npm.cmd audit --omit=dev` - passed with 0 production vulnerabilities
+
+### Files changed
+
+- `copilot-proxy` - upstream `v0.9.3` plus rebased conversation middleware
+- `package.json` / `package-lock.json` - version `0.9.3`
+- `RELEASE_NOTES.md` / `RELEASE_NOTES_TEMP.md` - `v0.9.3` release notes
+- `README.md` - current stable release link
+- `DEVLOG.md` - this entry
+
 ## 2026-07-17 - consolidate the public v0.9.0 upgrade path
 
 ### Summary

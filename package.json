@@ -1,8 +1,8 @@
 {
   "name": "copilot-proxy-gui",
   "private": true,
-  "version": "0.9.0",
-  "releaseVersion": "0.9.0",
+  "version": "0.9.3",
+  "releaseVersion": "0.9.3",
   "description": "Desktop GUI for copilot-proxy — Electron + React + Vite",
   "type": "module",
   "main": "electron/main.cjs",
