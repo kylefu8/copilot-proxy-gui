@@ -14,6 +14,7 @@ import {
   fetchModelsFromCopilot,
   getAuthStatus,
   getServiceState,
+  listAccounts,
   markServiceRunning,
   markServiceStopped,
   checkClaudeEnv,
@@ -24,6 +25,14 @@ import {
   writeClaudeEnv,
 } from './core/service-manager'
 
+const EMPTY_ACCOUNTS_STATE = {
+  explicit: false,
+  defaultAccount: null,
+  accounts: [],
+  routes: [],
+  requiredRoutes: [],
+}
+
 function AppInner() {
   const { t } = useI18n()
   const [page, setPage] = useState('main') // 'main' | 'settings' | 'about'
@@ -33,6 +42,8 @@ function AppInner() {
 
   const [authStatus, setAuthStatus] = useState(null)
   const [authLoading, setAuthLoading] = useState(false)
+  const [accountsState, setAccountsState] = useState(EMPTY_ACCOUNTS_STATE)
+  const [accountsLoading, setAccountsLoading] = useState(true)
 
   const [models, setModels] = useState(null)
   const [modelsLoading, setModelsLoading] = useState(false)
@@ -58,6 +69,14 @@ function AppInner() {
   }, [])
 
   const baseUrl = useMemo(() => `http://localhost:${config.port}`, [config.port])
+  const selectedAccountId = useMemo(() => {
+    if (!accountsState.explicit) return ''
+    const configuredIds = new Set(accountsState.accounts.map(account => account.id))
+    if (config.selectedAccountId && configuredIds.has(config.selectedAccountId)) {
+      return config.selectedAccountId
+    }
+    return accountsState.defaultAccount || accountsState.accounts[0]?.id || ''
+  }, [accountsState, config.selectedAccountId])
 
   // Apply theme on load and whenever it changes
   useEffect(() => {
@@ -132,14 +151,35 @@ function AppInner() {
     }
   }, [config])
 
-  // Auto-fetch models on mount if logged in
+  // Load both authentication modes before deciding how to fetch models.
   useEffect(() => {
-    getAuthStatus().then(auth => {
-      setAuthStatus(auth)
-      if (auth.hasToken) {
-        refreshModels()
+    let cancelled = false
+    async function loadIdentityState() {
+      let registry = EMPTY_ACCOUNTS_STATE
+      try {
+        registry = await listAccounts()
       }
-    }).catch(e => console.warn('Initial auth check failed:', e))
+      catch (error) {
+        console.warn('Initial account registry check failed:', error)
+      }
+      if (cancelled) return
+      setAccountsState({ ...EMPTY_ACCOUNTS_STATE, ...registry })
+      setAccountsLoading(false)
+
+      try {
+        const auth = await getAuthStatus()
+        if (cancelled) return
+        setAuthStatus(auth)
+        if ((registry.explicit && registry.accounts?.length > 0) || auth.hasToken) {
+          refreshModels(registry.defaultAccount || undefined, !!registry.explicit)
+        }
+      }
+      catch (error) {
+        console.warn('Initial auth check failed:', error)
+      }
+    }
+    loadIdentityState()
+    return () => { cancelled = true }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateConfig = useCallback((key, value) => {
@@ -198,11 +238,13 @@ function AppInner() {
     }
   }, [])
 
-  const refreshModels = useCallback(async () => {
+  const refreshModels = useCallback(async (accountIdOverride, explicitOverride) => {
     setModelsLoading(true)
     setModelsError(null)
     try {
-      const data = await fetchModelsFromCopilot(config.accountType)
+      const explicit = explicitOverride ?? accountsState.explicit
+      const accountId = explicit ? (accountIdOverride || selectedAccountId) : undefined
+      const data = await fetchModelsFromCopilot(config.accountType, accountId, !!config.proxyEnv)
       setModels(data)
       // Token is valid — clear any previous expired flag
       setAuthStatus(prev => prev?.tokenExpired ? { ...prev, tokenExpired: false } : prev)
@@ -221,11 +263,65 @@ function AppInner() {
     finally {
       setModelsLoading(false)
     }
-  }, [config.accountType])
+  }, [accountsState.explicit, config.accountType, config.proxyEnv, selectedAccountId])
+
+  const refreshAccounts = useCallback(async () => {
+    setAccountsLoading(true)
+    try {
+      const registry = { ...EMPTY_ACCOUNTS_STATE, ...await listAccounts() }
+      setAccountsState(registry)
+
+      let nextSelectedAccount = ''
+      if (registry.explicit) {
+        const ids = new Set(registry.accounts.map(account => account.id))
+        nextSelectedAccount = ids.has(configRef.current.selectedAccountId)
+          ? configRef.current.selectedAccountId
+          : (registry.defaultAccount || registry.accounts[0]?.id || '')
+      }
+
+      if (configRef.current.selectedAccountId !== nextSelectedAccount) {
+        setConfig(prev => {
+          const next = { ...prev, selectedAccountId: nextSelectedAccount }
+          saveConfig(next)
+          return next
+        })
+      }
+
+      const legacyAuth = await getAuthStatus().catch(() => null)
+      if (legacyAuth) setAuthStatus(legacyAuth)
+      if ((registry.explicit && registry.accounts.length > 0) || legacyAuth?.hasToken) {
+        await refreshModels(nextSelectedAccount || undefined, registry.explicit)
+      }
+      else {
+        setModels(null)
+      }
+      setUsage(null)
+      return registry
+    }
+    finally {
+      setAccountsLoading(false)
+    }
+  }, [refreshModels])
+
+  const selectAccount = useCallback(async (accountId) => {
+    setConfig(prev => {
+      const next = {
+        ...prev,
+        selectedAccountId: accountId,
+        defaultModel: '',
+        defaultSmallModel: '',
+      }
+      saveConfig(next)
+      return next
+    })
+    setUsage(null)
+    await refreshModels(accountId, true)
+  }, [refreshModels])
 
   const runStart = useCallback(async () => {
+    const hasExplicitAccounts = accountsState.explicit && accountsState.accounts.length > 0
     // Check auth — if neither cached state nor loaded models confirm auth, re-check via IPC
-    if (!authStatus?.hasToken && (!models || models.length === 0)) {
+    if (!hasExplicitAccounts && !authStatus?.hasToken && (!models?.data || models.data.length === 0)) {
       try {
         const auth = await getAuthStatus()
         setAuthStatus(auth)
@@ -254,7 +350,7 @@ function AppInner() {
 
     // Actually start
     setServiceBusy(true)
-    const args = toCliArgs(config)
+    const args = toCliArgs(config, { explicitAccounts: hasExplicitAccounts })
     await startService(args, config.defaultModel, { conversationLog: config.conversationLog })
     try {
       await waitForReady(baseUrl)
@@ -264,7 +360,7 @@ function AppInner() {
     }
     setService(getServiceState())
     setServiceBusy(false)
-  }, [config, baseUrl, authStatus, models])
+  }, [config, baseUrl, authStatus, models, accountsState])
 
   // Keep triggerStartRef in sync so tray-initiated start uses latest runStart
   useEffect(() => { triggerStartRef.current = runStart }, [runStart])
@@ -291,7 +387,7 @@ function AppInner() {
     pendingStartRef.current = false
     ;(async () => {
       setServiceBusy(true)
-      const args = toCliArgs(config)
+      const args = toCliArgs(config, { explicitAccounts: accountsState.explicit && accountsState.accounts.length > 0 })
       await startService(args, config.defaultModel, { conversationLog: config.conversationLog })
       try {
         await waitForReady(baseUrl)
@@ -302,7 +398,7 @@ function AppInner() {
       setService(getServiceState())
       setServiceBusy(false)
     })()
-  }, [config, baseUrl]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [config, baseUrl, accountsState]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const runStop = useCallback(async () => {
     setServiceBusy(true)
@@ -341,17 +437,16 @@ function AppInner() {
         authLoading={authLoading}
         onCheckAuth={checkAuth}
         onStartDeviceCode={(payload) => startDeviceCodeAuth(payload)}
+        accountsState={accountsState}
+        accountsLoading={accountsLoading}
+        serviceRunning={service.status === 'running'}
+        onAccountsChanged={refreshAccounts}
         onBack={() => {
           setPage('main')
-          // Clear stale errors and refresh auth (user may have just logged in)
+          // Clear stale errors and refresh either the explicit account registry
+          // or the legacy encrypted token after settings changes.
           setService(prev => prev.lastError ? { ...prev, status: 'idle', lastError: null } : prev)
-          getAuthStatus().then(auth => {
-            setAuthStatus(prev => ({
-              ...auth,
-              tokenExpired: prev?.tokenExpired && auth.hasToken ? true : false,
-            }))
-            if (auth.hasToken && !models) refreshModels()
-          }).catch(e => console.warn('Auth refresh failed:', e))
+          refreshAccounts().catch(e => console.warn('Account refresh failed:', e))
         }}
       />
       {showCloseDialog && (
@@ -387,6 +482,9 @@ function AppInner() {
       onSaveConfig={persistConfig}
       showToast={showToast}
       authStatus={authStatus}
+      accountsState={accountsState}
+      selectedAccountId={selectedAccountId}
+      onSelectAccount={selectAccount}
       usageOpen={usageOpen}
       onToggleUsage={setUsageOpen}
       usage={usage}

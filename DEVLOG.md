@@ -1,5 +1,57 @@
 # Development Log
 
+## 2026-08-12 - v0.10.0 multi-account release
+
+### Summary
+
+Upgraded the embedded `copilot-proxy` from upstream `v0.9.3` to `v0.10.0` and added a GUI for its deterministic multi-account model. Existing single-account users keep the encrypted one-shot `GH_TOKEN` path until they opt in; explicit multi-account mode uses upstream `accounts.json` and owner-only account token files without injecting the legacy GUI token. Conversation recording remains the only proxy customization.
+
+### Upstream and local proxy commits
+
+- `99f49ea` - upstream `v0.10.0` release
+- `8af4f15` - reapplied local conversation recording middleware
+- `42d3499` - reapplied request-cloning compatibility fix
+- `c4f2d8f` - aligned the middleware import with the current upstream source layout
+
+### Changes
+
+- Updated the proxy fork to `conv-middleware-v0100` at `c4f2d8f`
+- Preserved a two-file proxy delta: `src/lib/conversation-middleware.ts` and `src/server.ts`
+- Added GUI account management for add/migrate, re-authentication, default selection, removal, and ordered model-glob routes
+- Added account-scoped model catalog and usage views; non-default selections use `<account>/<model>` routing
+- Added fixed, allowlisted Electron account commands with token input over stdin, output redaction, proxy data-dir alignment, and foreground runtime-lock protection
+- Prevented legacy `GH_TOKEN` / `GITHUB_TOKEN` injection when explicit `accounts.json` is active
+- Kept account type per account in explicit mode while preserving the legacy global account type for single-account users
+- Added bilingual account-management copy, responsive settings layout, README documentation, and `v0.10.0` release notes
+- Bumped GUI package and release version to `0.10.0`
+
+### Validation
+
+- `bun install --frozen-lockfile --ignore-scripts` - passed; tracked proxy files and lockfile remained unchanged
+- `bun run typecheck` followed by `bun run build` - passed serially
+- Multi-account authentication, identity, isolation, registry, router, store, health, locking, operations, and routing-focused test batches - passed with no failures
+- Server setup, models route, Messages routing, and Responses WebSocket tests - 106 passed, 0 failed
+- `npm.cmd run test:electron` - 11 passed, 0 failed
+- `npm.cmd run build` and `node scripts/bundle-proxy.cjs` - passed
+- Bundle contains the `accounts` CLI, `x-copilot-account` routing, and `COPILOT_PROXY_CONVERSATION_LOG`
+- Playwright mock verification passed at the production 480 px main-window and 620 px settings-window widths, including non-default `account/model` values
+- `npm.cmd run desktop:build` - passed; generated Windows setup/portable artifacts, app.asar, proxy bundle, and manifest `0.10.0`
+- Manifest version is `0.10.0`, minimum Electron is `41.0.0`, app/bundle SHA-256 values match, and packaged metadata/file versions are `0.10.0`
+- Confirmed `electron/account-operations.cjs` is packaged while Electron test files are excluded from app.asar
+- Packaged GUI smoke remained responsive for eight seconds with four Electron child processes
+- Live local validation with the user's configured two-account registry: both accounts were ready, identity-verified, loaded model catalogs, and returned account-scoped usage; no account names, numeric IDs, tokens, or quota values were emitted
+- Graceful SIGINT shutdown removed the local port 4399 listener
+- `npm.cmd audit --omit=dev` - 0 production vulnerabilities
+
+### Files changed
+
+- `copilot-proxy` - upstream `v0.10.0` plus rebased conversation middleware
+- `electron/main.cjs` / `electron/account-operations.cjs` / `electron/proxy-launch.cjs` - account lifecycle, model inspection, and startup boundary
+- `src/App.jsx` / settings and main views / core helpers / styles / i18n - multi-account GUI and account-scoped model/usage state
+- `package.json` / `package-lock.json` - version `0.10.0`
+- `RELEASE_NOTES.md` / `RELEASE_NOTES_TEMP.md` / `README.md` - `v0.10.0` release documentation
+- `DEVLOG.md` - this entry
+
 ## 2026-07-25 - v0.9.3 upstream sync
 
 ### Summary

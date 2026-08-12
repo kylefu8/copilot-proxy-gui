@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict')
 const test = require('node:test')
 
-const { buildProxyLaunch } = require('./proxy-launch.cjs')
+const { buildProxyLaunch, isClaudeModelId } = require('./proxy-launch.cjs')
 
 test('moves the GUI token out of argv and into the one-shot startup environment', () => {
   const launch = buildProxyLaunch({
@@ -48,4 +48,29 @@ test('passes conversation logging without inventing a token', () => {
 
   assert.equal(launch.env.COPILOT_PROXY_CONVERSATION_LOG, '1')
   assert.equal('GH_TOKEN' in launch.env, false)
+})
+
+test('does not inject legacy token environment variables in explicit account mode', () => {
+  const launch = buildProxyLaunch({
+    args: ['start', '--port', '4399'],
+    token: 'gui-token-must-not-leak',
+    explicitAccounts: true,
+    dataDir: 'C:\\Users\\tester\\AppData\\Local\\copilot-proxy',
+    baseEnv: {
+      GH_TOKEN: 'ambient-token',
+      GITHUB_TOKEN: 'ambient-token-2',
+      PATH: 'test-path',
+    },
+  })
+
+  assert.equal('GH_TOKEN' in launch.env, false)
+  assert.equal('GITHUB_TOKEN' in launch.env, false)
+  assert.equal(launch.env.COPILOT_PROXY_DATA_DIR, 'C:\\Users\\tester\\AppData\\Local\\copilot-proxy')
+  assert.equal(launch.env.PATH, 'test-path')
+})
+
+test('recognizes account-prefixed Claude model ids for Claude Code options', () => {
+  assert.equal(isClaudeModelId('claude-sonnet-4.5'), true)
+  assert.equal(isClaudeModelId('work/claude-sonnet-4.5'), true)
+  assert.equal(isClaudeModelId('work/gpt-5.6'), false)
 })

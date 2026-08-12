@@ -7,7 +7,18 @@ const { spawn, spawnSync } = require('node:child_process')
 const crypto = require('node:crypto')
 const { app, BrowserWindow, ipcMain, shell, dialog, Menu, Tray, nativeImage, safeStorage } = require('electron')
 const appPackage = require('../package.json')
-const { buildProxyLaunch } = require('./proxy-launch.cjs')
+const { buildProxyLaunch, isClaudeModelId } = require('./proxy-launch.cjs')
+const {
+  ACCOUNT_ID_PATTERN,
+  buildAccountActionCommand,
+  buildAccountCommand,
+  getProxyDataDir,
+  parseJsonOutput,
+  readAccountsSnapshot,
+  redactCommandOutput,
+  resolveProxyCommand,
+  runProxyCommand,
+} = require('./account-operations.cjs')
 
 function getAppVersion() {
   return appPackage.releaseVersion || appPackage.version
@@ -284,7 +295,7 @@ function killServiceProcess(child) {
 
 // ─── Token storage (encrypted via Electron safeStorage) ─────────────
 
-function readToken() {
+function readToken({ preserveLegacy = false } = {}) {
   const encPath = githubTokenPath() + '.enc'
   const plainPath = githubTokenPath()
 
@@ -339,13 +350,16 @@ function readToken() {
   }
 
   if (legacyToken) {
-    // Save to new location and clean up legacy files
+    // Save to new location. Account import deliberately preserves the
+    // legacy token so the existing single-account path remains recoverable.
     writeToken(legacyToken)
-    try {
-      if (fs.existsSync(legacyEnc)) fs.unlinkSync(legacyEnc)
-      if (fs.existsSync(legacyPlain)) fs.unlinkSync(legacyPlain)
-    } catch (e) {
-      console.warn('Failed to clean up legacy token files:', e)
+    if (!preserveLegacy) {
+      try {
+        if (fs.existsSync(legacyEnc)) fs.unlinkSync(legacyEnc)
+        if (fs.existsSync(legacyPlain)) fs.unlinkSync(legacyPlain)
+      } catch (e) {
+        console.warn('Failed to clean up legacy token files:', e)
+      }
     }
     return legacyToken
   }
@@ -383,7 +397,7 @@ function deleteTokenFile() {
   if (fs.existsSync(legacyPlain)) fs.unlinkSync(legacyPlain)
 }
 
-function resolveBunExecutable() {
+function resolveBunExecutable({ baseEnv = process.env } = {}) {
   const candidates = ['bun']
 
   const home = process.env.HOME || process.env.USERPROFILE
@@ -398,6 +412,7 @@ function resolveBunExecutable() {
     const result = spawnSync(candidate, ['--version'], {
       stdio: 'pipe',
       shell: false,
+      env: baseEnv,
     })
 
     if (result.status === 0) {
@@ -465,6 +480,81 @@ function resolveClaudeCodeExecutable() {
   return null
 }
 
+// ─── Explicit account operations ───────────────────────────────────
+
+function proxyDataDir() {
+  return getProxyDataDir({ env: process.env })
+}
+
+function readProxyAccounts() {
+  return readAccountsSnapshot({ dataDir: proxyDataDir() })
+}
+
+function assertAccountMutationAllowed() {
+  if (serviceChild) {
+    throw new Error('Cannot modify Copilot accounts while the GUI proxy service is running. Stop the service first.')
+  }
+}
+
+function resolveAccountProxyCommand() {
+  const accountEnv = { ...process.env }
+  delete accountEnv.GH_TOKEN
+  delete accountEnv.GITHUB_TOKEN
+  const bunInfo = isPackaged ? null : resolveBunExecutable({ baseEnv: accountEnv })
+  return resolveProxyCommand({
+    isPackaged,
+    resourcesPath: isPackaged ? process.resourcesPath : undefined,
+    dirname: __dirname,
+    repoRoot,
+    processExecPath: process.execPath,
+    bunPath: bunInfo?.bin,
+  })
+}
+
+async function runAccountCli(args, { token, secrets = [] } = {}) {
+  assertAccountMutationAllowed()
+
+  const dataDir = proxyDataDir()
+  const command = resolveAccountProxyCommand()
+  const result = await runProxyCommand({
+    command,
+    args,
+    baseEnv: process.env,
+    dataDir,
+    stdinToken: token,
+  })
+
+  if (result.exitCode !== 0) {
+    const detail = redactCommandOutput(`${result.stderr}\n${result.stdout}`, [token, ...secrets])
+    throw new Error(
+      `Copilot account command failed with exit code ${result.exitCode}${detail ? `: ${detail}` : ''}`,
+    )
+  }
+
+  return result
+}
+
+function accountActionPayload(value) {
+  if (value === undefined || value === null) return null
+  return buildAccountActionCommand(value)
+}
+
+async function addAccountFromSavedToken(payload) {
+  const args = buildAccountCommand('account_add_saved_token', payload)
+  assertAccountMutationAllowed()
+  const token = readToken({ preserveLegacy: true })
+  if (!token) throw new Error(mt('err.loginFirst'))
+
+  await runAccountCli(args, { token, secrets: [token] })
+  return { ok: true }
+}
+
+async function runAccountMutation(command, payload) {
+  const args = buildAccountCommand(command, payload)
+  await runAccountCli(args)
+  return { ok: true }
+}
+
 // ─── Service management ──────────────────────────────────────────────
 
 function serviceStart(payload) {
@@ -478,14 +568,19 @@ function serviceStart(payload) {
   const requestedArgs = Array.isArray(payload?.args) ? payload.args : ['start', '--port', '4399']
 
   // copilot-proxy 0.8+ treats --github-token as a persist-and-exit bootstrap
-  // option. Pass the GUI's decrypted token through GH_TOKEN instead; upstream
-  // consumes and removes it from the long-running process environment.
-  const token = readToken()
+  // option. Legacy mode receives the GUI token through GH_TOKEN instead;
+  // explicit accounts.json mode is authoritative and must not receive it.
+  const accounts = readProxyAccounts()
+  const explicitAccounts = accounts.explicit
+  const dataDir = proxyDataDir()
+  const token = explicitAccounts ? '' : readToken()
   const launch = buildProxyLaunch({
     args: requestedArgs,
     token,
     baseEnv: process.env,
     conversationLog: payload?.conversationLog,
+    explicitAccounts,
+    dataDir,
   })
   const args = launch.args
   const proxyEnv = launch.env
@@ -1077,7 +1172,7 @@ async function launchClaudeCode(payload) {
   // This is a Claude Code convention — CC recognizes [1m] to enable 1M context mode,
   // and strips it before sending the model ID to the API provider.
   // Only applies to Claude models; non-Claude models (e.g. GPT) should not get this suffix.
-  const isClaude = model && /^claude/i.test(model)
+  const isClaude = isClaudeModelId(model)
   const suffix1m = appendLargeContextSuffix && isClaude && contextWindow && contextWindow >= 1000000 ? '[1m]' : ''
   const envVars = {
     ANTHROPIC_BASE_URL: serverUrl,
@@ -1176,7 +1271,7 @@ function writeClaudeEnv(payload) {
   // This is a Claude Code convention — CC recognizes [1m] to enable 1M context mode,
   // and strips it before sending the model ID to the API provider.
   // Only applies to Claude models; non-Claude models (e.g. GPT) should not get this suffix.
-  const isClaude = model && /^claude/i.test(model)
+  const isClaude = isClaudeModelId(model)
   const suffix1m = appendLargeContextSuffix && isClaude && contextWindow && contextWindow >= 1000000 ? '[1m]' : ''
   const envVars = {
     ANTHROPIC_BASE_URL: serverUrl,
@@ -1283,6 +1378,44 @@ async function detectAccountType() {
 // ─── Fetch models directly from Copilot API ─────────────────────────
 
 async function fetchModels(payload) {
+  const hasAccountId = payload && Object.prototype.hasOwnProperty.call(payload, 'accountId')
+  const requestedAccountId = hasAccountId ? payload.accountId : undefined
+  const accounts = readProxyAccounts()
+
+  if (accounts.explicit || hasAccountId) {
+    const accountId = requestedAccountId === undefined || requestedAccountId === null
+      ? accounts.defaultAccount
+      : requestedAccountId
+    if (typeof accountId !== 'string' || !ACCOUNT_ID_PATTERN.test(accountId)) {
+      throw new Error('A valid account id is required to fetch models in explicit account mode')
+    }
+
+    const command = resolveAccountProxyCommand()
+    const proxyEnv = payload?.proxyEnv === true
+    const result = await runProxyCommand({
+      command,
+      args: [
+        'models', '--account', accountId, '--client', 'all', '--json',
+        ...(proxyEnv ? ['--proxy-env'] : []),
+      ],
+      baseEnv: process.env,
+      dataDir: proxyDataDir(),
+    })
+    if (result.exitCode !== 0) {
+      const detail = redactCommandOutput(`${result.stderr}\n${result.stdout}`)
+      throw new Error(
+        `Copilot models command failed with exit code ${result.exitCode}${detail ? `: ${detail}` : ''}`,
+      )
+    }
+
+    const models = parseJsonOutput(result.stdout)
+    if (!models || typeof models !== 'object' || !Array.isArray(models.data)) {
+      throw new Error('Copilot models command returned an invalid response')
+    }
+    pushLog(`[models] Refreshed explicit account model list successfully (${models.data.length} models)`)
+    return models
+  }
+
   const accountType = payload?.accountType || 'individual'
 
   pushLog(`[models] Refreshing model list (accountType=${accountType})`)
@@ -1340,6 +1473,9 @@ async function fetchModels(payload) {
 let authChildWin = null
 
 async function authDeviceCodeFlow(payload) {
+  const accountAction = accountActionPayload(payload?.accountAction)
+  if (accountAction) assertAccountMutationAllowed()
+
   const theme = payload?.theme || 'midnight'
   // Request device code from GitHub (use node:https to bypass Electron net.fetch)
   const response = await httpsPost(`${GITHUB_BASE_URL}/login/device/code`, {
@@ -1480,7 +1616,36 @@ async function authDeviceCodeFlow(payload) {
         const json = pollResp.json
 
         if (json && json.access_token) {
-          // Save token — wrap in try/catch so a write error doesn't cause infinite retry
+          if (accountAction) {
+            try {
+              await runAccountCli(accountAction.args, {
+                token: json.access_token,
+                secrets: [json.access_token],
+              })
+            } catch (accountErr) {
+              console.error('Failed to update explicit account:', accountErr)
+              const message = accountErr.message || String(accountErr)
+              setChildStatus('❌ ' + message, 'status')
+              setTimeout(() => {
+                if (authChildWin && !authChildWin.isDestroyed()) authChildWin.close()
+              }, 3000)
+              resolve({ status: 'error', message })
+              return
+            }
+
+            setChildStatus(`${accountAction.description}: ${accountAction.id}`, 'status success')
+            setTimeout(() => {
+              if (authChildWin && !authChildWin.isDestroyed()) authChildWin.close()
+            }, 1500)
+            resolve({
+              status: 'success',
+              message: `${accountAction.description}: ${accountAction.id}`,
+            })
+            return
+          }
+
+          // Save the legacy token — wrap in try/catch so a write error doesn't
+          // cause infinite retry. Explicit account actions never take this path.
           try {
             writeToken(json.access_token)
           } catch (writeErr) {
@@ -1881,6 +2046,18 @@ ipcMain.handle('copilot-proxy:invoke', async (_event, request) => {
       return authStatus()
     case 'auth_device_code_start':
       return authDeviceCodeFlow(payload)
+    case 'accounts_list':
+      return readProxyAccounts()
+    case 'account_add_saved_token':
+      return addAccountFromSavedToken(payload)
+    case 'account_set_default':
+      return runAccountMutation('account_set_default', payload)
+    case 'account_remove':
+      return runAccountMutation('account_remove', payload)
+    case 'account_route_set':
+      return runAccountMutation('account_route_set', payload)
+    case 'account_route_remove':
+      return runAccountMutation('account_route_remove', payload)
     case 'service_logs':
       return { lines: serviceLogs }
     case 'open_log_window':

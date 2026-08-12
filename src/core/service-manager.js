@@ -239,17 +239,62 @@ export async function deleteToken() {
 }
 
 /**
- * Fetch available models directly from Copilot API using stored GitHub token.
- * Does not require the proxy service to be running.
+ * Fetch available models without requiring the proxy service to be running.
+ * Legacy mode uses the encrypted GUI token directly; explicit account mode
+ * delegates to `copilot-proxy models --account ... --json`.
  */
-export async function fetchModelsFromCopilot(accountType) {
+export async function fetchModelsFromCopilot(accountType, accountId, proxyEnv = false) {
   const runtime = getRuntime()
   if (runtime === 'web') {
     throw new Error('Requires desktop runtime (Electron).')
   }
-  const result = await invokeDesktop('fetch_models', { accountType })
+  const result = await invokeDesktop('fetch_models', { accountType, accountId, proxyEnv })
   if (result && result.error) {
     throw new Error(result.message || 'Unknown error')
   }
   return result
+}
+
+/**
+ * List the explicit copilot-proxy account registry. When no accounts.json
+ * exists, `explicit` is false and the legacy single-account flow remains in
+ * control.
+ */
+export async function listAccounts() {
+  const runtime = getRuntime()
+  if (runtime === 'web') {
+    return {
+      explicit: false,
+      defaultAccount: null,
+      accounts: [],
+      routes: [],
+      requiredRoutes: [],
+    }
+  }
+  return invokeDesktop('accounts_list')
+}
+
+export async function addAccountFromSavedToken(id, accountType, proxyEnv = false) {
+  if (getRuntime() === 'web') throw new Error('Requires desktop runtime (Electron).')
+  return invokeDesktop('account_add_saved_token', { id, accountType, proxyEnv })
+}
+
+export async function setDefaultAccount(id, proxyEnv = false) {
+  if (getRuntime() === 'web') throw new Error('Requires desktop runtime (Electron).')
+  return invokeDesktop('account_set_default', { id, proxyEnv })
+}
+
+export async function removeAccount(id, proxyEnv = false) {
+  if (getRuntime() === 'web') throw new Error('Requires desktop runtime (Electron).')
+  return invokeDesktop('account_remove', { id, proxyEnv })
+}
+
+export async function setAccountRoute(match, account, proxyEnv = false) {
+  if (getRuntime() === 'web') throw new Error('Requires desktop runtime (Electron).')
+  return invokeDesktop('account_route_set', { match, account, proxyEnv })
+}
+
+export async function removeAccountRoute(match, proxyEnv = false) {
+  if (getRuntime() === 'web') throw new Error('Requires desktop runtime (Electron).')
+  return invokeDesktop('account_route_remove', { match, proxyEnv })
 }

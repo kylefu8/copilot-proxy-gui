@@ -1203,3 +1203,202 @@ pre {
   display: flex;
   gap: 8px;
 }
+
+/* ── Multi-account management ────────────────────── */
+
+.accounts-section {
+  gap: 10px;
+}
+
+.accounts-section h2 {
+  margin: 0;
+}
+
+.account-mode-badge,
+.account-default-badge,
+.usage-account-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border: 1px solid var(--accent-border);
+  border-radius: 999px;
+  padding: 2px 7px;
+  color: var(--accent);
+  background: var(--surface);
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.account-legacy-block,
+.account-add-panel,
+.account-routes {
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  padding: 8px;
+}
+
+.account-token-path {
+  margin: 0;
+  word-break: break-all;
+}
+
+.compact-message {
+  margin: 4px 0 0;
+}
+
+.account-list {
+  display: grid;
+  gap: 6px;
+}
+
+.account-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 8px 9px;
+  background: var(--surface);
+}
+
+.account-card-main {
+  min-width: 0;
+}
+
+.account-card-title,
+.account-card-meta,
+.account-card-actions,
+.account-form-row,
+.route-row,
+.route-form-row,
+.account-context-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.account-card-title {
+  margin-bottom: 3px;
+}
+
+.account-card-meta {
+  flex-wrap: wrap;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+}
+
+.account-card-meta span + span::before {
+  content: '·';
+  margin-right: 7px;
+}
+
+.account-card-actions {
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.secondary-btn,
+.danger-text-btn {
+  background: transparent;
+  padding: 4px 7px;
+  font-size: 0.78rem;
+}
+
+.secondary-btn {
+  border-color: var(--border);
+  color: var(--text-dim);
+}
+
+.danger-text-btn {
+  border-color: transparent;
+  color: var(--red);
+}
+
+.account-add-panel,
+.account-add-heading {
+  display: grid;
+  gap: 6px;
+}
+
+.account-add-heading .hint {
+  margin: 0;
+}
+
+.account-form-row input,
+.route-form-row input {
+  min-width: 0;
+  flex: 1;
+}
+
+.account-form-row select,
+.route-form-row select {
+  width: 120px;
+}
+
+.migrate-account-btn {
+  width: fit-content;
+}
+
+.account-lock-hint {
+  margin: 0;
+  color: var(--yellow);
+}
+
+.account-routes summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.account-routes > .hint {
+  margin: 7px 0;
+}
+
+.route-row {
+  min-height: 30px;
+  border-bottom: 1px solid var(--border);
+}
+
+.route-row code {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.route-form-row {
+  margin-top: 8px;
+}
+
+.account-type-managed-note {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.account-context-row {
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+}
+
+.account-context-row label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+
+.account-context-row .hint {
+  margin: 0;
+  min-width: 0;
+  flex: 1;
+  text-align: right;
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.usage-account-badge {
+  margin-left: auto;
+}

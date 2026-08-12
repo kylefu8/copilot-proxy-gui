@@ -26,6 +26,7 @@
 ### 功能
 
 - GitHub OAuth 登录（Device Code 流程，内置验证码弹窗）
+- 多账号管理（最多 8 个账号）：添加、迁移当前登录、重新认证、默认账号、删除及模型 glob 路由
 - 自动检测账号类型（个人 / 商业 / 企业）
 - 服务启停，独立日志弹窗窗口（过滤、跟踪/暂停、可调字号、自动换行、主题同步）
 - 模型列表拉取 & 默认模型 / 快速模型选择（选择即保存，主界面支持一键刷新模型列表）
@@ -48,7 +49,7 @@
 
 从 [Releases](https://github.com/kylefu8/copilot-proxy-gui/releases) 页面下载：
 
-当前正式版本为 [v0.9.3](https://github.com/kylefu8/copilot-proxy-gui/releases/tag/v0.9.3)。从 `v0.9.0` 升级的完整变化和兼容注意事项见 [RELEASE_NOTES.md](RELEASE_NOTES.md#v093)。
+当前正式版本为 [v0.10.0](https://github.com/kylefu8/copilot-proxy-gui/releases/tag/v0.10.0)。从 `v0.9.3` 升级的完整变化和兼容注意事项见 [RELEASE_NOTES.md](RELEASE_NOTES.md#v0100)。
 
 - **Windows**：安装版（`-setup.exe`，推荐，支持轻量更新）或便携版（`-portable.exe`）
 - **macOS**：DMG 安装包（arm64 适用于 Apple Silicon，x64 适用于 Intel）
@@ -97,7 +98,7 @@ npm run desktop:build
 
 GUI 默认请求本地 `http://localhost:4399`，可在设置页修改端口。
 
-GUI 会通过一次性 `GH_TOKEN` 环境输入把加密保存的 Token 传给代理，不会在长期运行参数中保留 `-g/--github-token`。启动时会显式允许 `localhost`、`127.0.0.1` 和 `::1`，并保留用户已有的 `COPILOT_PROXY_ALLOWED_HOSTS`。非回环部署仍需按实际域名、Docker 服务名或反向代理 Host 自行设置该变量。
+单账号模式下，GUI 会通过一次性 `GH_TOKEN` 环境输入把加密保存的 Token 传给代理，不会在长期运行参数中保留 `-g/--github-token`。启用多账号后，GUI 改以上游数据目录中的 `accounts.json` 与仅所有者可访问的 `tokens/<account-id>` 为准，并停止注入旧 Token；模型和用量可以按账号查看，非默认账号模型使用 `<account>/<model>` selector。启动时会显式允许 `localhost`、`127.0.0.1` 和 `::1`，并保留用户已有的 `COPILOT_PROXY_ALLOWED_HOSTS`。非回环部署仍需按实际域名、Docker 服务名或反向代理 Host 自行设置该变量。
 
 关闭窗口时会自动停止 proxy 子进程。
 
@@ -110,6 +111,11 @@ GUI 会通过一次性 `GH_TOKEN` 环境输入把加密保存的 Token 传给代
 | `service_logs` | 获取服务日志 |
 | `auth_status` | 检查 token 状态 |
 | `auth_device_code_start` | 启动 Device Code 登录流程 |
+| `accounts_list` | 读取多账号配置 |
+| `account_add_saved_token` | 将现有登录迁移为多账号记录 |
+| `account_set_default` | 设置默认账号 |
+| `account_remove` | 删除账号 |
+| `account_route_set` / `account_route_remove` | 管理模型 glob 路由 |
 | `delete_token` | 删除已保存 token |
 | `fetch_models` | 拉取模型列表 |
 | `detect_account_type` | 检测账号类型 |
@@ -141,6 +147,7 @@ A desktop GUI for [copilot-proxy](https://github.com/Jer-y/copilot-proxy), built
 ### Features
 
 - GitHub OAuth login (Device Code flow, built-in verification code popup)
+- Multi-account management (up to 8 accounts): add, migrate the current login, re-authenticate, set default, remove, and configure model-glob routes
 - Auto-detect account type (individual / business / enterprise)
 - Service start/stop, standalone log viewer popup window (filter, follow/pause, adjustable font size, word wrap, theme sync)
 - Model list fetching & default/fast model selection (saves on select, with one-click model refresh on the main screen)
@@ -163,7 +170,7 @@ A desktop GUI for [copilot-proxy](https://github.com/Jer-y/copilot-proxy), built
 
 Download from the [Releases](https://github.com/kylefu8/copilot-proxy-gui/releases) page:
 
-The current stable release is [v0.9.3](https://github.com/kylefu8/copilot-proxy-gui/releases/tag/v0.9.3). See [RELEASE_NOTES.md](RELEASE_NOTES.md#v093) for the complete upgrade path and compatibility notes from `v0.9.0`.
+The current stable release is [v0.10.0](https://github.com/kylefu8/copilot-proxy-gui/releases/tag/v0.10.0). See [RELEASE_NOTES.md](RELEASE_NOTES.md#v0100) for the complete upgrade path and compatibility notes from `v0.9.3`.
 
 - **Windows**: Installer (`-setup.exe`, recommended, supports lightweight updates) or Portable edition (`-portable.exe`)
 - **macOS**: DMG installer (arm64 for Apple Silicon, x64 for Intel)
@@ -212,7 +219,7 @@ Output is in the `release/` directory.
 
 The GUI connects to local `http://localhost:4399` by default. The port can be changed in Settings.
 
-The GUI supplies its encrypted token through the one-shot `GH_TOKEN` environment input and never keeps `-g/--github-token` in the long-running command line. It explicitly allows `localhost`, `127.0.0.1`, and `::1` while preserving existing `COPILOT_PROXY_ALLOWED_HOSTS` entries. Non-loopback deployments must still configure that variable for the actual domain, Docker service name, or reverse-proxy Host.
+In single-account mode, the GUI supplies its encrypted token through the one-shot `GH_TOKEN` environment input and never keeps `-g/--github-token` in the long-running command line. After multi-account mode is enabled, upstream `accounts.json` and owner-only `tokens/<account-id>` files become authoritative and the GUI stops injecting the legacy token; model and usage views are account-scoped, and non-default account models use the `<account>/<model>` selector. The GUI explicitly allows `localhost`, `127.0.0.1`, and `::1` while preserving existing `COPILOT_PROXY_ALLOWED_HOSTS` entries. Non-loopback deployments must still configure that variable for the actual domain, Docker service name, or reverse-proxy Host.
 
 The proxy child process is automatically stopped when the window is closed.
 
@@ -225,6 +232,11 @@ The proxy child process is automatically stopped when the window is closed.
 | `service_logs` | Get logs |
 | `auth_status` | Check token status |
 | `auth_device_code_start` | Start Device Code login |
+| `accounts_list` | Read multi-account configuration |
+| `account_add_saved_token` | Migrate the existing login into an account record |
+| `account_set_default` | Set the default account |
+| `account_remove` | Remove an account |
+| `account_route_set` / `account_route_remove` | Manage model-glob routes |
 | `delete_token` | Delete saved token |
 | `fetch_models` | Fetch model list |
 | `detect_account_type` | Detect account type |

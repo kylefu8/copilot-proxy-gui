@@ -15,6 +15,12 @@ function formatContextWindow(tokens) {
   return String(tokens)
 }
 
+function bareModelId(modelId) {
+  if (!modelId) return ''
+  const separator = modelId.indexOf('/')
+  return separator > 0 ? modelId.slice(separator + 1) : modelId
+}
+
 export function MainView({
   config,
   service,
@@ -34,6 +40,9 @@ export function MainView({
   onSaveConfig,
   showToast,
   authStatus,
+  accountsState,
+  selectedAccountId,
+  onSelectAccount,
   usageOpen,
   onToggleUsage,
   usage,
@@ -56,13 +65,23 @@ export function MainView({
 
   const isRunning = service.status === 'running'
   const modelOptions = models?.data ?? []
+  const explicitAccounts = !!accountsState?.explicit
+  const configuredAccounts = accountsState?.accounts || []
 
   const hasModels = modelOptions.length > 0
-  const hasAuth = authStatus?.hasToken
+  const hasAuth = explicitAccounts ? configuredAccounts.length > 0 : authStatus?.hasToken
+
+  const modelValue = useCallback((modelId) => {
+    if (!explicitAccounts || !selectedAccountId || selectedAccountId === accountsState?.defaultAccount) {
+      return modelId
+    }
+    return `${selectedAccountId}/${modelId}`
+  }, [accountsState?.defaultAccount, explicitAccounts, selectedAccountId])
 
   // Derive context window from selected model's capabilities
-  const selectedModelData = modelOptions.find(m => m.id === config.defaultModel)
+  const selectedModelData = modelOptions.find(m => m.id === bareModelId(config.defaultModel))
   const contextWindow = selectedModelData?.capabilities?.limits?.max_context_window_tokens
+    ?? selectedModelData?.contextWindow
 
   // Check env var status and Claude Code installation on mount
   useEffect(() => {
@@ -116,7 +135,7 @@ export function MainView({
     setUsageLoading(true)
     setUsageError('')
     try {
-      const data = await getUsage(baseUrl)
+      const data = await getUsage(baseUrl, explicitAccounts ? selectedAccountId : undefined)
       setUsage(data)
     }
     catch (error) {
@@ -126,7 +145,13 @@ export function MainView({
     finally {
       setUsageLoading(false)
     }
-  }, [baseUrl, getUsage])
+  }, [baseUrl, explicitAccounts, getUsage, selectedAccountId])
+
+  useEffect(() => {
+    usageAutoRefreshed.current = false
+    setUsage(null)
+    setUsageError('')
+  }, [selectedAccountId, setUsage, setUsageError])
 
   const premium = usage?.quota_snapshots?.premium_interactions
 
@@ -223,6 +248,25 @@ export function MainView({
 
         {/* Model selection */}
         <section className="control-bar model-bar">
+          {explicitAccounts && (
+            <div className="account-context-row">
+              <label title={t('accounts.contextHint')}>
+                <span className="info-label">{t('accounts.modelUsageAccount')}</span>
+                <select
+                  value={selectedAccountId || accountsState.defaultAccount || ''}
+                  onChange={event => onSelectAccount(event.target.value)}
+                  disabled={modelsLoading}
+                >
+                  {configuredAccounts.map(account => (
+                    <option key={account.id} value={account.id}>
+                      {account.id}{account.id === accountsState.defaultAccount ? ` (${t('accounts.default')})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <span className="hint">{t('accounts.contextRoutingHint')}</span>
+            </div>
+          )}
           <div className="row gap-8">
             <label className="model-select-row" title={t('model.defaultTooltip')}>
               <span className="info-label">{t('model.default')}</span>
@@ -233,9 +277,10 @@ export function MainView({
               >
                 <option value="">{modelsLoading ? t('loading') : t('model.select')}</option>
                 {modelOptions.map(m => {
-                  const ctx = m.capabilities?.limits?.max_context_window_tokens
-                  const label = ctx ? `${m.id} (${formatContextWindow(ctx)})` : m.id
-                  return <option key={m.id} value={m.id}>{label}</option>
+                  const ctx = m.capabilities?.limits?.max_context_window_tokens ?? m.contextWindow
+                  const name = m.displayName && m.displayName !== m.id ? `${m.displayName} · ${m.id}` : m.id
+                  const label = ctx ? `${name} (${formatContextWindow(ctx)})` : name
+                  return <option key={m.id} value={modelValue(m.id)}>{label}</option>
                 })}
               </select>
             </label>
@@ -248,9 +293,10 @@ export function MainView({
               >
                 <option value="">{t('model.optional')}</option>
                 {modelOptions.map(m => {
-                  const ctx = m.capabilities?.limits?.max_context_window_tokens
-                  const label = ctx ? `${m.id} (${formatContextWindow(ctx)})` : m.id
-                  return <option key={m.id} value={m.id}>{label}</option>
+                  const ctx = m.capabilities?.limits?.max_context_window_tokens ?? m.contextWindow
+                  const name = m.displayName && m.displayName !== m.id ? `${m.displayName} · ${m.id}` : m.id
+                  const label = ctx ? `${name} (${formatContextWindow(ctx)})` : name
+                  return <option key={m.id} value={modelValue(m.id)}>{label}</option>
                 })}
               </select>
             </label>
@@ -259,7 +305,7 @@ export function MainView({
           {hasAuth && !hasModels && !modelsLoading && !modelsError && <p className="hint">{t('model.loadingList')}</p>}
           {hasAuth && hasModels && !config.defaultModel && !isRunning && <p className="hint">{t('model.selectFirst')}</p>}
           {modelsError && <p className="error">{modelsError.key === 'tokenExpired' ? t('model.tokenExpired') : t('model.fetchError') + (modelsError.detail || '')}</p>}
-          {config.appendLargeContextSuffix && contextWindow && contextWindow >= 1000000 && /^claude/i.test(config.defaultModel) && (
+          {config.appendLargeContextSuffix && contextWindow && contextWindow >= 1000000 && /^claude/i.test(bareModelId(config.defaultModel)) && (
             <p className="hint" style={{ color: 'var(--green)', margin: '4px 0 0' }}>
               ✅ {t('model.largeContext').replace('{size}', formatContextWindow(contextWindow))}
             </p>
@@ -360,6 +406,9 @@ export function MainView({
         >
           <summary>
             <span>{t('usage.title')}</span>
+            {explicitAccounts && selectedAccountId && (
+              <span className="usage-account-badge">{selectedAccountId}</span>
+            )}
             {premium && (
               <span className="usage-mini">
                 {premium.entitlement - premium.remaining}/{premium.entitlement}

@@ -6,8 +6,9 @@ export async function getHealth(baseUrl) {
   return response.text()
 }
 
-export async function getUsage(baseUrl) {
-  const response = await fetch(`${baseUrl}/usage`, { signal: AbortSignal.timeout(5000) })
+export async function getUsage(baseUrl, accountId) {
+  const query = accountId ? `?account=${encodeURIComponent(accountId)}` : ''
+  const response = await fetch(`${baseUrl}/usage${query}`, { signal: AbortSignal.timeout(5000) })
   if (!response.ok)
     throw new Error(`Usage request failed: ${response.status}`)
 

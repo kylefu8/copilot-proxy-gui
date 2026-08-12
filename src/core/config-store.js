@@ -22,6 +22,7 @@ export const defaultConfig = {
   autoStart: false,
   defaultModel: '',
   defaultSmallModel: '',
+  selectedAccountId: '',       // account used for model inspection and account-scoped usage
   theme: 'frost',
   lang: 'zh',  // static default; overridden by detectSystemLang() on first launch
   closeAction: '',            // '' = ask, 'minimize', 'quit'
@@ -85,10 +86,10 @@ export function resetConfig() {
   return { ...defaultConfig }
 }
 
-export function toCliArgs(config) {
+export function toCliArgs(config, { explicitAccounts = false } = {}) {
   const args = ['start', '--port', String(config.port)]
 
-  if (config.accountType && config.accountType !== 'individual')
+  if (!explicitAccounts && config.accountType && config.accountType !== 'individual')
     args.push('--account-type', config.accountType)
 
   if (config.verbose)
