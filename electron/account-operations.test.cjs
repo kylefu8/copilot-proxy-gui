@@ -9,6 +9,7 @@ const {
   buildAccountCommandEnvironment,
   exitMultiAccountMode,
   getProxyDataDir,
+  getRequestedAccountId,
   isAllowedGitHubVerificationUrl,
   parseJsonOutput,
   readAccountsSnapshot,
@@ -16,6 +17,14 @@ const {
   runProxyCommand,
   summarizeCommandFailure,
 } = require('./account-operations.cjs')
+
+test('only treats a non-empty string as a requested account id', () => {
+  assert.equal(getRequestedAccountId(undefined), undefined)
+  assert.equal(getRequestedAccountId(null), undefined)
+  assert.equal(getRequestedAccountId(''), undefined)
+  assert.equal(getRequestedAccountId('   '), undefined)
+  assert.equal(getRequestedAccountId('personal'), 'personal')
+})
 
 test('uses the requested proxy data-dir defaults', () => {
   assert.equal(

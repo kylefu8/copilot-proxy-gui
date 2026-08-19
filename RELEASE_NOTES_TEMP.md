@@ -6,6 +6,7 @@
 • The final account token is first written to Electron encrypted storage, `accounts.json` is renamed to a timestamped backup, and account token files are preserved for recovery / 最后一个账号的 Token 会先写入 Electron 加密存储，`accounts.json` 改名为带时间戳的备份，并保留账号 Token 文件以便恢复
 • Added runtime/account-lock and configuration-snapshot checks so concurrent changes fail safely without removing the active configuration / 新增 runtime/account lock 与配置快照检查，并发变化时安全失败，不移除当前配置
 • Returning to multi-account mode remains available through “Migrate Current Login” or a fresh Device Flow login / 之后仍可通过“迁移当前登录”或重新执行 Device Flow 再次启用多账号模式
+• After exiting multi-account mode, model refresh now omits the empty account ID and reliably returns to the encrypted single-account flow instead of reporting an explicit-account error / 退出多账号模式后，模型刷新会省略空账号 ID，并可靠回到加密单账号流程，不再误报显式账号模式错误
 
 ## 🧭 Clear Account Feedback / 清晰的账号反馈
 
@@ -22,17 +23,18 @@
 
 • Keeps the embedded `copilot-proxy` and conversation-recording fork unchanged from `v0.10.0` / 内嵌 `copilot-proxy` 与对话记录 fork 保持 `v0.10.0` 不变
 • Existing multi-account data, routes, themes, Claude Code integration, lightweight updates, and single-account authentication remain compatible / 现有多账号数据、路由、主题、Claude Code 集成、轻量更新及单账号认证保持兼容
+• This cumulative release supersedes `v0.10.0-1` and includes every GUI fix since `v0.10.0` / 本累计版本取代 `v0.10.0-1`，包含自 `v0.10.0` 以来的全部 GUI 修复
 
 ## ⬇️ Download / 下载
 
 | Platform | File | Note |
 | -------- | ---- | ---- |
-| Windows (Installer) | Copilot.Proxy.GUI-0.10.0-1-setup.exe | **Recommended** / 推荐，supports lightweight update / 支持轻量更新 |
-| Windows (Portable) | Copilot.Proxy.GUI-0.10.0-1-portable.exe | No installation needed / 无需安装，双击即用 |
-| macOS (Apple Silicon) | Copilot.Proxy.GUI-0.10.0-1-arm64.dmg | M1/M2/M3/M4 Mac |
-| macOS (Intel) | Copilot.Proxy.GUI-0.10.0-1-x64.dmg | Intel Mac |
+| Windows (Installer) | Copilot.Proxy.GUI-0.10.0-2-setup.exe | **Recommended** / 推荐，supports lightweight update / 支持轻量更新 |
+| Windows (Portable) | Copilot.Proxy.GUI-0.10.0-2-portable.exe | No installation needed / 无需安装，双击即用 |
+| macOS (Apple Silicon) | Copilot.Proxy.GUI-0.10.0-2-arm64.dmg | M1/M2/M3/M4 Mac |
+| macOS (Intel) | Copilot.Proxy.GUI-0.10.0-2-x64.dmg | Intel Mac |
 
 > macOS first launch / macOS 首次启动: Right-click the app -> Open -> click "Open" in the dialog. If blocked, go to System Settings -> Privacy & Security -> click "Open Anyway".
 > 右键点击应用 -> 打开 -> 在弹窗中点击"打开"。如被阻止，前往系统设置 -> 隐私与安全性 -> 点击"仍要打开"。
 
-Full Changelog: [v0.10.0...v0.10.0-1](https://github.com/kylefu8/copilot-proxy-gui/compare/v0.10.0...v0.10.0-1)
+Full Changelog: [v0.10.0...v0.10.0-2](https://github.com/kylefu8/copilot-proxy-gui/compare/v0.10.0...v0.10.0-2)

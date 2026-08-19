@@ -14,6 +14,7 @@ const {
   buildAccountCommand,
   exitMultiAccountMode: exitMultiAccountModeOnDisk,
   getProxyDataDir,
+  getRequestedAccountId,
   isAllowedGitHubVerificationUrl,
   parseJsonOutput,
   readAccountsSnapshot,
@@ -1402,8 +1403,8 @@ async function detectAccountType() {
 // ─── Fetch models directly from Copilot API ─────────────────────────
 
 async function fetchModels(payload) {
-  const hasAccountId = payload && Object.prototype.hasOwnProperty.call(payload, 'accountId')
-  const requestedAccountId = hasAccountId ? payload.accountId : undefined
+  const requestedAccountId = getRequestedAccountId(payload?.accountId)
+  const hasAccountId = requestedAccountId !== undefined
   const accounts = readProxyAccounts()
 
   if (accounts.explicit || hasAccountId) {

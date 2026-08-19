@@ -248,7 +248,12 @@ export async function fetchModelsFromCopilot(accountType, accountId, proxyEnv = 
   if (runtime === 'web') {
     throw new Error('Requires desktop runtime (Electron).')
   }
-  const result = await invokeDesktop('fetch_models', { accountType, accountId, proxyEnv })
+  const payload = {
+    accountType,
+    proxyEnv,
+    ...(accountId ? { accountId } : {}),
+  }
+  const result = await invokeDesktop('fetch_models', payload)
   if (result && result.error) {
     const error = new Error(result.message || 'Unknown error')
     error.code = result.code

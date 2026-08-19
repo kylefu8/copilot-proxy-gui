@@ -1,10 +1,10 @@
 # Development Log
 
-## 2026-08-19 - v0.10.0-1 multi-account UX hotfix
+## 2026-08-19 - v0.10.0-2 cumulative multi-account UX hotfix
 
 ### Summary
 
-Follow-up hotfix for the `v0.10.0` multi-account GUI. It makes the final-account transition recoverable, replaces raw CLI diagnostics with actionable messages, keeps Device Flow navigation outside the verification popup, and distinguishes a successfully loaded empty model catalog from an in-progress request. The embedded proxy and conversation-recording fork remain unchanged.
+Cumulative hotfix for the `v0.10.0` multi-account GUI, superseding `v0.10.0-1`. It makes the final-account transition recoverable, reliably returns model fetching to legacy single-account mode, replaces raw CLI diagnostics with actionable messages, keeps Device Flow navigation outside the verification popup, and distinguishes a successfully loaded empty model catalog from an in-progress request. The embedded proxy and conversation-recording fork remain unchanged.
 
 ### Changes
 
@@ -13,33 +13,38 @@ Follow-up hotfix for the `v0.10.0` multi-account GUI. It makes the final-account
 - Renames `accounts.json` to a timestamped `accounts.json.gui-backup-*` file and preserves account token files
 - Added foreground-service, runtime/account lock, and repeated configuration-snapshot checks around the transition
 - Restores the final account type when returning to single-account mode and keeps re-entry through login or current-login migration
+- Omits an absent account ID in the renderer and accepts explicit account selection in Electron only for a non-empty string, preventing legacy model refresh from re-entering explicit mode
 - Strips ANSI controls and CLI info/change-preview noise from account failures
 - Added bilingual guidance for duplicate GitHub identities, referenced accounts, invalid credentials, runtime locks, and final-account handling
 - Maps account-scoped GitHub authentication failures to a direct re-authentication prompt
 - Restricts the Device Flow external link to `https://github.com/login/device`, opens it in the system browser, and prevents popup navigation
 - Shows “No models available” after a successful empty catalog response instead of displaying a permanent loading message
-- Bumped GUI package and release version to `0.10.0-1`; the proxy submodule remains `conv-middleware-v0100` at `c4f2d8f`
+- Bumped GUI package and release version to `0.10.0-2`; the proxy submodule remains `conv-middleware-v0100` at `c4f2d8f`
 
 ### Validation
 
-- `npm.cmd run test:electron` - 18 passed, 0 failed
+- `npm.cmd run test:electron` - 19 passed, 0 failed
 - Electron main/account-helper syntax checks - passed
 - `npm.cmd run build` - passed
+- `bun run typecheck` followed by `bun run build` in the unchanged proxy submodule - passed serially
+- Account authentication, health/models, identity, isolation, jitter, lock, operations, registry, router, routing, and store tests - 61 passed, 2 platform-specific skips, 0 failed
+- Server setup, models route, Messages routing, and Responses WebSocket tests - 106 passed, 0 failed
+- Standalone proxy bundle contains account commands, `x-copilot-account` routing, and `COPILOT_PROXY_CONVERSATION_LOG`
 - `npm.cmd audit --omit=dev` - 0 production vulnerabilities
 - `git diff --check` - passed (line-ending conversion warnings only)
-- `npm.cmd run desktop:build` - passed; generated Windows setup/portable artifacts, app.asar, proxy bundle, and manifest `0.10.0-1`
-- Manifest version is `0.10.0-1`, minimum Electron is `41.0.0`, app/bundle SHA-256 values match, and packaged metadata/file versions are `0.10.0-1`
+- `npm.cmd run desktop:build` - passed; generated Windows setup/portable artifacts, app.asar, proxy bundle, and manifest `0.10.0-2`
+- Manifest version is `0.10.0-2`, minimum Electron is `41.0.0`, app/bundle SHA-256 values match, and packaged metadata/file versions are `0.10.0-2`
 - Confirmed `electron/account-operations.cjs` is packaged while Electron test files remain excluded from app.asar
 - Packaged GUI smoke stayed responsive for eight seconds with three Electron child processes against isolated temporary GUI/proxy data directories; no account configuration was created
-- Interactive review identified the last-account, duplicate-identity, invalid-login, verification-link, and empty-model cases; the final fixes passed the automated Electron/build checks above
+- Interactive review identified the last-account, legacy model-refresh, duplicate-identity, invalid-login, verification-link, and empty-model cases; the final fixes passed the automated Electron/build checks above
 
 ### Files changed
 
-- `electron/account-operations.cjs` / tests - safe exit transition, CLI summary, and GitHub verification URL allowlist
-- `electron/main.cjs` - strict encrypted token handoff, structured authentication errors, and external popup-link handling
+- `electron/account-operations.cjs` / tests - safe exit transition, requested-account normalization, CLI summary, and GitHub verification URL allowlist
+- `electron/main.cjs` - strict encrypted token handoff, legacy/explicit model-mode selection, structured authentication errors, and external popup-link handling
 - `src/App.jsx` / account/model helpers and views / i18n - account transition and user-facing state fixes
-- `package.json` / `package-lock.json` - version `0.10.0-1`
-- `README.md` / `RELEASE_NOTES.md` / `RELEASE_NOTES_TEMP.md` - hotfix release documentation
+- `package.json` / `package-lock.json` - version `0.10.0-2`
+- `README.md` / `RELEASE_NOTES.md` / `RELEASE_NOTES_TEMP.md` - cumulative `v0.10.0...v0.10.0-2` hotfix documentation
 - `DEVLOG.md` - this entry
 
 ## 2026-08-12 - v0.10.0 multi-account release

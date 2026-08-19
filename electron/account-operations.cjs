@@ -16,6 +16,10 @@ function isRecord(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
+function getRequestedAccountId(value) {
+  return typeof value === 'string' && value.trim() ? value : undefined
+}
+
 function isAllowedGitHubVerificationUrl(value) {
   try {
     const url = new URL(String(value))
@@ -577,6 +581,7 @@ module.exports = {
   buildAccountCommandEnvironment,
   exitMultiAccountMode,
   getProxyDataDir,
+  getRequestedAccountId,
   isAllowedGitHubVerificationUrl,
   normalizeAccountsConfiguration,
   parseJsonOutput,
