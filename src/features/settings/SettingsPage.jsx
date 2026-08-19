@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   addAccountFromSavedToken,
   detectAccountType,
+  exitMultiAccountMode,
   removeAccount,
   removeAccountRoute,
   resizeWindow,
@@ -14,6 +15,36 @@ import { DangerConfirmDialog } from '../main/DangerConfirmDialog'
 const accountTypes = ['individual', 'business', 'enterprise']
 const ACCOUNT_ID_RE = /^[a-z0-9][a-z0-9_-]{0,31}$/
 const WINDOWS_RESERVED_ACCOUNT_IDS = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/
+
+function friendlyAccountError(error, accounts, t) {
+  let message = error?.message || String(error)
+  const duplicate = message.match(/GitHub identity\s+(.+?)\s+is already configured/i)
+  if (duplicate) {
+    const existing = accounts.find(account => (
+      account.githubLogin?.toLowerCase() === duplicate[1].toLowerCase()
+    ))
+    return existing
+      ? t('accounts.identityAlreadyConfiguredAs').replace('{id}', existing.id)
+      : t('accounts.identityAlreadyConfigured')
+  }
+  if (/Account .+ is still referenced by:/i.test(message)) {
+    return t('accounts.accountStillReferenced')
+  }
+  if (/Cannot remove the only configured account/i.test(message)) {
+    return t('accounts.useExitMode')
+  }
+  if (/Failed to get GitHub user/i.test(message)) {
+    return t('accounts.githubLoginInvalid')
+  }
+  if (/runtime\.lock|accounts\.lock|while the GUI proxy service is running/i.test(message)) {
+    return t('accounts.stopToEdit')
+  }
+  message = message
+    .replace(/^Error invoking remote method ['"]copilot-proxy:invoke['"]:\s*Error:\s*/i, '')
+    .replace(/^Copilot account command failed with exit code \d+:\s*/i, '')
+    .replace(/^Error:\s*/i, '')
+  return message
+}
 
 export function SettingsPage({
   config,
@@ -131,24 +162,24 @@ export function SettingsPage({
     setRouteAccount(accountsState?.defaultAccount || configuredAccounts[0]?.id || '')
   }, [accountsState?.defaultAccount, configuredAccounts, routeAccount])
 
-  const runAccountAction = useCallback(async (key, action, successMessage) => {
+  const runAccountAction = useCallback(async (key, action, successMessage, refreshOptions) => {
     setAccountBusy(key)
     setAccountMessage('')
     setAccountError('')
     try {
       await action()
-      await onAccountsChanged()
+      await onAccountsChanged(refreshOptions)
       setAccountMessage(successMessage)
       return true
     }
     catch (error) {
-      setAccountError(error?.message || String(error))
+      setAccountError(friendlyAccountError(error, configuredAccounts, t))
       return false
     }
     finally {
       setAccountBusy('')
     }
-  }, [onAccountsChanged])
+  }, [configuredAccounts, onAccountsChanged, t])
 
   const validateNewAccount = useCallback(() => {
     const id = newAccountId.trim()
@@ -204,6 +235,16 @@ export function SettingsPage({
     if (!confirm(t('accounts.removeConfirm').replace('{id}', id))) return
     await runAccountAction(`remove:${id}`, () => removeAccount(id, !!config.proxyEnv), t('accounts.removed'))
   }, [config.proxyEnv, runAccountAction, t])
+
+  const exitExplicitAccountMode = useCallback(async () => {
+    if (!confirm(t('accounts.exitConfirm'))) return
+    await runAccountAction(
+      'exit-multi-account',
+      exitMultiAccountMode,
+      t('accounts.exited'),
+      { legacyAccountType: configuredAccounts[0]?.accountType },
+    )
+  }, [configuredAccounts, runAccountAction, t])
 
   const saveRoute = useCallback(async () => {
     const match = routeMatch.trim()
@@ -297,14 +338,23 @@ export function SettingsPage({
                     <button type="button" className="secondary-btn" disabled={accountWritesDisabled} onClick={() => reauthenticateAccount(account.id)}>
                       {t('accounts.reauth')}
                     </button>
-                    <button type="button" className="danger-text-btn" disabled={accountWritesDisabled} onClick={() => removeConfiguredAccount(account.id)}>
-                      {t('accounts.remove')}
-                    </button>
+                    {configuredAccounts.length === 1 ? (
+                      <button type="button" className="danger-text-btn" disabled={accountWritesDisabled} onClick={exitExplicitAccountMode}>
+                        {t('accounts.exitMode')}
+                      </button>
+                    ) : (
+                      <button type="button" className="danger-text-btn" disabled={accountWritesDisabled} onClick={() => removeConfiguredAccount(account.id)}>
+                        {t('accounts.remove')}
+                      </button>
+                    )}
                   </div>
                 </div>
               )
             })}
           </div>
+        )}
+        {explicitAccounts && configuredAccounts.length === 1 && (
+          <p className="hint compact-message">{t('accounts.exitHint')}</p>
         )}
 
         <div className="account-add-panel">

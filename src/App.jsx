@@ -238,13 +238,13 @@ function AppInner() {
     }
   }, [])
 
-  const refreshModels = useCallback(async (accountIdOverride, explicitOverride) => {
+  const refreshModels = useCallback(async (accountIdOverride, explicitOverride, accountTypeOverride) => {
     setModelsLoading(true)
     setModelsError(null)
     try {
       const explicit = explicitOverride ?? accountsState.explicit
       const accountId = explicit ? (accountIdOverride || selectedAccountId) : undefined
-      const data = await fetchModelsFromCopilot(config.accountType, accountId, !!config.proxyEnv)
+      const data = await fetchModelsFromCopilot(accountTypeOverride || config.accountType, accountId, !!config.proxyEnv)
       setModels(data)
       // Token is valid — clear any previous expired flag
       setAuthStatus(prev => prev?.tokenExpired ? { ...prev, tokenExpired: false } : prev)
@@ -252,8 +252,11 @@ function AppInner() {
     catch (error) {
       setModels(null)
       const msg = error.message || String(error)
-      // 401 = token expired, suggest re-login
-      if (msg.includes('401')) {
+      if (error.code === 'ACCOUNT_AUTH_INVALID' || msg.includes('Failed to get GitHub user')) {
+        setModelsError({ key: 'accountAuthInvalid' })
+      }
+      // 401 = legacy token expired, suggest re-login
+      else if (msg.includes('401')) {
         setModelsError({ key: 'tokenExpired' })
         setAuthStatus(prev => ({ ...prev, tokenExpired: true }))
       } else {
@@ -265,7 +268,7 @@ function AppInner() {
     }
   }, [accountsState.explicit, config.accountType, config.proxyEnv, selectedAccountId])
 
-  const refreshAccounts = useCallback(async () => {
+  const refreshAccounts = useCallback(async ({ legacyAccountType } = {}) => {
     setAccountsLoading(true)
     try {
       const registry = { ...EMPTY_ACCOUNTS_STATE, ...await listAccounts() }
@@ -279,9 +282,19 @@ function AppInner() {
           : (registry.defaultAccount || registry.accounts[0]?.id || '')
       }
 
-      if (configRef.current.selectedAccountId !== nextSelectedAccount) {
+      const nextLegacyAccountType = !registry.explicit && legacyAccountType
+        ? legacyAccountType
+        : configRef.current.accountType
+      if (
+        configRef.current.selectedAccountId !== nextSelectedAccount
+        || configRef.current.accountType !== nextLegacyAccountType
+      ) {
         setConfig(prev => {
-          const next = { ...prev, selectedAccountId: nextSelectedAccount }
+          const next = {
+            ...prev,
+            selectedAccountId: nextSelectedAccount,
+            accountType: nextLegacyAccountType,
+          }
           saveConfig(next)
           return next
         })
@@ -290,7 +303,7 @@ function AppInner() {
       const legacyAuth = await getAuthStatus().catch(() => null)
       if (legacyAuth) setAuthStatus(legacyAuth)
       if ((registry.explicit && registry.accounts.length > 0) || legacyAuth?.hasToken) {
-        await refreshModels(nextSelectedAccount || undefined, registry.explicit)
+        await refreshModels(nextSelectedAccount || undefined, registry.explicit, nextLegacyAccountType)
       }
       else {
         setModels(null)

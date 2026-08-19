@@ -191,7 +191,15 @@ export function SetupPanel({
             </button>
           </div>
 
-          {modelsError && <p className="error">{modelsError.key === 'tokenExpired' ? 'Token expired' : 'Failed to fetch models: ' + (modelsError.detail || '')}</p>}
+          {modelsError && (
+            <p className="error">
+              {modelsError.key === 'tokenExpired'
+                ? 'Token expired'
+                : modelsError.key === 'accountAuthInvalid'
+                  ? 'GitHub login is no longer valid. Re-authenticate this account.'
+                  : 'Failed to fetch models: ' + (modelsError.detail || '')}
+            </p>
+          )}
 
           {modelOptions.length > 0 && (
             <div className="grid2 compact-grid">

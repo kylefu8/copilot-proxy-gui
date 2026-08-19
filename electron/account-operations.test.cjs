@@ -7,10 +7,14 @@ const test = require('node:test')
 const {
   buildAccountCommand,
   buildAccountCommandEnvironment,
+  exitMultiAccountMode,
   getProxyDataDir,
+  isAllowedGitHubVerificationUrl,
   parseJsonOutput,
   readAccountsSnapshot,
+  redactCommandOutput,
   runProxyCommand,
+  summarizeCommandFailure,
 } = require('./account-operations.cjs')
 
 test('uses the requested proxy data-dir defaults', () => {
@@ -131,4 +135,164 @@ test('parses machine-readable model output', () => {
     object: 'models',
     data: [{ id: 'gpt-5.4' }],
   })
+})
+
+test('allows only the GitHub HTTPS device verification page', () => {
+  assert.equal(isAllowedGitHubVerificationUrl('https://github.com/login/device'), true)
+  assert.equal(isAllowedGitHubVerificationUrl('https://github.com/login/device/'), true)
+  assert.equal(isAllowedGitHubVerificationUrl('http://github.com/login/device'), false)
+  assert.equal(isAllowedGitHubVerificationUrl('https://github.com.evil.example/login/device'), false)
+  assert.equal(isAllowedGitHubVerificationUrl('https://user@github.com/login/device'), false)
+  assert.equal(isAllowedGitHubVerificationUrl('https://github.com:444/login/device'), false)
+  assert.equal(isAllowedGitHubVerificationUrl('https://github.com/settings/tokens'), false)
+})
+
+function writeSingleAccountFixture(dataDir, options = {}) {
+  const token = Object.prototype.hasOwnProperty.call(options, 'token')
+    ? options.token
+    : 'ghp-single-account-secret'
+  const accounts = options.accounts
+  const configuredAccounts = accounts || [{
+    id: 'default',
+    accountType: 'individual',
+    githubLogin: 'tester',
+    githubUserId: 42,
+  }]
+  fs.mkdirSync(path.join(dataDir, 'tokens'), { recursive: true })
+  fs.writeFileSync(path.join(dataDir, 'accounts.json'), JSON.stringify({
+    version: 1,
+    revision: 2,
+    defaultAccount: configuredAccounts[0]?.id || 'default',
+    accounts: configuredAccounts,
+    routes: configuredAccounts.length === 1
+      ? [{ match: 'claude-*', account: configuredAccounts[0].id }]
+      : [],
+  }))
+  if (token !== undefined && configuredAccounts.length > 0) {
+    fs.writeFileSync(path.join(dataDir, 'tokens', configuredAccounts[0].id), `${token}\n`)
+  }
+  return token
+}
+
+test('exits multi-account mode by encrypting through the legacy callback and atomically backing up config', () => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-proxy-gui-exit-'))
+  const token = writeSingleAccountFixture(dataDir)
+  const configPath = path.join(dataDir, 'accounts.json')
+  const configBefore = fs.readFileSync(configPath)
+  let callbackToken = null
+
+  try {
+    const result = exitMultiAccountMode({
+      dataDir,
+      now: () => 1700000000000,
+      writeToken(value) {
+        callbackToken = value
+      },
+    })
+
+    assert.deepEqual(result, {
+      ok: true,
+      backupFileName: 'accounts.json.gui-backup-1700000000000',
+    })
+    assert.equal(callbackToken, token)
+    assert.equal(fs.existsSync(configPath), false)
+    assert.deepEqual(
+      fs.readFileSync(path.join(dataDir, result.backupFileName)),
+      configBefore,
+    )
+    assert.equal(fs.readFileSync(path.join(dataDir, 'tokens', 'default'), 'utf8').trim(), token)
+    assert.equal(JSON.stringify(result).includes(token), false)
+  } finally {
+    fs.rmSync(dataDir, { recursive: true, force: true })
+  }
+})
+
+test('rejects exit when more than one account is configured', () => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-proxy-gui-exit-many-'))
+  let callbackCalled = false
+  try {
+    writeSingleAccountFixture(dataDir, {
+      accounts: [
+        { id: 'default', accountType: 'individual', githubLogin: 'tester', githubUserId: 42 },
+        { id: 'work', accountType: 'business', githubLogin: 'worker', githubUserId: 43 },
+      ],
+    })
+    assert.throws(
+      () => exitMultiAccountMode({
+        dataDir,
+        writeToken() {
+          callbackCalled = true
+        },
+      }),
+      /exactly one configured account is required/,
+    )
+    assert.equal(callbackCalled, false)
+    assert.equal(fs.existsSync(path.join(dataDir, 'accounts.json')), true)
+  } finally {
+    fs.rmSync(dataDir, { recursive: true, force: true })
+  }
+})
+
+test('rejects exit when the account token is missing or a lock may be active', () => {
+  const missingTokenDir = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-proxy-gui-exit-no-token-'))
+  const lockedDir = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-proxy-gui-exit-lock-'))
+  try {
+    writeSingleAccountFixture(missingTokenDir, { token: undefined })
+    assert.throws(
+      () => exitMultiAccountMode({ dataDir: missingTokenDir, writeToken() {} }),
+      /account token file is missing/,
+    )
+
+    writeSingleAccountFixture(lockedDir)
+    fs.mkdirSync(path.join(lockedDir, 'runtime.lock'))
+    assert.throws(
+      () => exitMultiAccountMode({ dataDir: lockedDir, writeToken() {} }),
+      /runtime\.lock.*may indicate another proxy process or account write/,
+    )
+    assert.equal(fs.existsSync(path.join(lockedDir, 'accounts.json')), true)
+  } finally {
+    fs.rmSync(missingTokenDir, { recursive: true, force: true })
+    fs.rmSync(lockedDir, { recursive: true, force: true })
+  }
+})
+
+test('refuses to rename when accounts.json changes after token preparation', () => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-proxy-gui-exit-race-'))
+  try {
+    writeSingleAccountFixture(dataDir)
+    const configPath = path.join(dataDir, 'accounts.json')
+    assert.throws(
+      () => exitMultiAccountMode({
+        dataDir,
+        writeToken() {
+          fs.writeFileSync(configPath, `${fs.readFileSync(configPath, 'utf8')}\n`)
+        },
+      }),
+      /accounts\.json changed during the operation/,
+    )
+    assert.equal(fs.existsSync(configPath), true)
+    assert.equal(fs.readdirSync(dataDir).some(name => name.startsWith('accounts.json.gui-backup-')), false)
+  } finally {
+    fs.rmSync(dataDir, { recursive: true, force: true })
+  }
+})
+
+test('removes ANSI CSI sequences after redacting command output', () => {
+  const output = '\x1b[41m\x1b[97msecret-token\x1b[0m command failed'
+  const redacted = redactCommandOutput(output, ['secret-token'])
+  assert.equal(redacted, '[redacted] command failed')
+  assert.equal(redacted.includes('\x1b['), false)
+})
+
+test('summarizes a CLI failure without diagnostic and preview noise', () => {
+  const output = [
+    '\x1b[41m ERROR \x1b[0m add account work failed: GitHub identity tester is already configured',
+    '\x1b[36mi\x1b[39m Configured Copilot upstream HTTP timeouts: headers=900000ms',
+    '\x1b[36mi\x1b[39m Using built-in longer HTTP timeouts for githubcopilot.com upstreams',
+    '\x1b[36mi\x1b[39m Change preview: Add account work (enterprise)',
+  ].join('\n')
+  assert.equal(
+    summarizeCommandFailure(output),
+    'add account work failed: GitHub identity tester is already configured',
+  )
 })

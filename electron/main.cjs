@@ -12,10 +12,12 @@ const {
   ACCOUNT_ID_PATTERN,
   buildAccountActionCommand,
   buildAccountCommand,
+  exitMultiAccountMode: exitMultiAccountModeOnDisk,
   getProxyDataDir,
+  isAllowedGitHubVerificationUrl,
   parseJsonOutput,
   readAccountsSnapshot,
-  redactCommandOutput,
+  summarizeCommandFailure,
   resolveProxyCommand,
   runProxyCommand,
 } = require('./account-operations.cjs')
@@ -367,7 +369,11 @@ function readToken({ preserveLegacy = false } = {}) {
   return ''
 }
 
-function writeToken(token) {
+function writeToken(token, { requireEncryption = false } = {}) {
+  if (requireEncryption && !safeStorage.isEncryptionAvailable()) {
+    throw new Error('Electron safeStorage encryption is unavailable.')
+  }
+
   ensureTokenDir()
   if (safeStorage.isEncryptionAvailable()) {
     try {
@@ -378,8 +384,15 @@ function writeToken(token) {
       if (fs.existsSync(plainPath)) fs.unlinkSync(plainPath)
       return
     } catch (e) {
+      if (requireEncryption) {
+        throw new Error('Failed to encrypt the token with Electron safeStorage.', { cause: e })
+      }
       console.warn('Failed to encrypt token, falling back to plaintext:', e)
     }
+  }
+
+  if (requireEncryption) {
+    throw new Error('Failed to encrypt the token with Electron safeStorage.')
   }
   fs.writeFileSync(githubTokenPath(), token, 'utf8')
 }
@@ -525,7 +538,7 @@ async function runAccountCli(args, { token, secrets = [] } = {}) {
   })
 
   if (result.exitCode !== 0) {
-    const detail = redactCommandOutput(`${result.stderr}\n${result.stdout}`, [token, ...secrets])
+    const detail = summarizeCommandFailure(`${result.stderr}\n${result.stdout}`, [token, ...secrets])
     throw new Error(
       `Copilot account command failed with exit code ${result.exitCode}${detail ? `: ${detail}` : ''}`,
     )
@@ -553,6 +566,17 @@ async function runAccountMutation(command, payload) {
   const args = buildAccountCommand(command, payload)
   await runAccountCli(args)
   return { ok: true }
+}
+
+async function exitMultiAccountMode() {
+  // This is intentionally a first-layer GUI guard. The on-disk helper also
+  // rejects runtime/accounts locks so an external proxy or account writer
+  // cannot be mistaken for a stopped foreground service.
+  assertAccountMutationAllowed()
+  return exitMultiAccountModeOnDisk({
+    dataDir: proxyDataDir(),
+    writeToken: token => writeToken(token, { requireEncryption: true }),
+  })
 }
 
 // ─── Service management ──────────────────────────────────────────────
@@ -1402,10 +1426,12 @@ async function fetchModels(payload) {
       dataDir: proxyDataDir(),
     })
     if (result.exitCode !== 0) {
-      const detail = redactCommandOutput(`${result.stderr}\n${result.stdout}`)
-      throw new Error(
+      const detail = summarizeCommandFailure(`${result.stderr}\n${result.stdout}`)
+      const error = new Error(
         `Copilot models command failed with exit code ${result.exitCode}${detail ? `: ${detail}` : ''}`,
       )
+      if (/Failed to get GitHub user/i.test(detail)) error.code = 'ACCOUNT_AUTH_INVALID'
+      throw error
     }
 
     const models = parseJsonOutput(result.stdout)
@@ -1491,10 +1517,12 @@ async function authDeviceCodeFlow(payload) {
   const { user_code, verification_uri, device_code } = data
   let interval = (data.interval || 5) + 1
 
-  // Open browser for verification
-  if (verification_uri) {
-    shell.openExternal(verification_uri)
+  if (!isAllowedGitHubVerificationUrl(verification_uri)) {
+    throw new Error('GitHub returned an invalid device verification URL.')
   }
+
+  // Open browser for verification
+  shell.openExternal(verification_uri)
 
   // Create a small child window showing the code
   const parent = mainWin
@@ -1551,7 +1579,7 @@ async function authDeviceCodeFlow(payload) {
     <button class="copy-btn" id="copyBtn">${mt('auth.copy')}</button>
     <span class="copied" id="copied"></span>
   </div>
-  <div class="hint">${mt('auth.browserOpened')}<br><a href="${safeUri}">${safeUri}</a></div>
+  <div class="hint">${mt('auth.browserOpened')}<br><a href="${safeUri}" target="_blank" rel="noopener noreferrer">${safeUri}</a></div>
   <div class="status" id="status">${mt('auth.waiting')}</div>
   <script>
     function copyCode() {
@@ -1574,7 +1602,20 @@ async function authDeviceCodeFlow(payload) {
   </script>
 </body></html>`
 
-  authChildWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
+  const authPageUrl = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`
+  const openVerificationInBrowser = (url) => {
+    if (isAllowedGitHubVerificationUrl(url)) shell.openExternal(url)
+  }
+  authChildWin.webContents.setWindowOpenHandler(({ url }) => {
+    openVerificationInBrowser(url)
+    return { action: 'deny' }
+  })
+  authChildWin.webContents.on('will-navigate', (event, url) => {
+    if (url === authPageUrl) return
+    event.preventDefault()
+    openVerificationInBrowser(url)
+  })
+  authChildWin.loadURL(authPageUrl)
 
   // Poll for authorization
   return new Promise((resolve) => {
@@ -2054,6 +2095,8 @@ ipcMain.handle('copilot-proxy:invoke', async (_event, request) => {
       return runAccountMutation('account_set_default', payload)
     case 'account_remove':
       return runAccountMutation('account_remove', payload)
+    case 'account_exit_multi':
+      return exitMultiAccountMode()
     case 'account_route_set':
       return runAccountMutation('account_route_set', payload)
     case 'account_route_remove':
@@ -2091,7 +2134,11 @@ ipcMain.handle('copilot-proxy:invoke', async (_event, request) => {
     case 'detect_account_type':
       return detectAccountType().catch(e => ({ error: true, message: e.message || String(e) }))
     case 'fetch_models':
-      return fetchModels(payload).catch(e => ({ error: true, message: e.message || String(e) }))
+      return fetchModels(payload).catch(e => ({
+        error: true,
+        code: e.code,
+        message: e.message || String(e),
+      }))
     case 'launch_claude_code':
       return launchClaudeCode(payload)
     case 'write_claude_env':

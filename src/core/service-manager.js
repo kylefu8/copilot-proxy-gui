@@ -250,7 +250,9 @@ export async function fetchModelsFromCopilot(accountType, accountId, proxyEnv = 
   }
   const result = await invokeDesktop('fetch_models', { accountType, accountId, proxyEnv })
   if (result && result.error) {
-    throw new Error(result.message || 'Unknown error')
+    const error = new Error(result.message || 'Unknown error')
+    error.code = result.code
+    throw error
   }
   return result
 }
@@ -287,6 +289,11 @@ export async function setDefaultAccount(id, proxyEnv = false) {
 export async function removeAccount(id, proxyEnv = false) {
   if (getRuntime() === 'web') throw new Error('Requires desktop runtime (Electron).')
   return invokeDesktop('account_remove', { id, proxyEnv })
+}
+
+export async function exitMultiAccountMode() {
+  if (getRuntime() === 'web') throw new Error('Requires desktop runtime (Electron).')
+  return invokeDesktop('account_exit_multi')
 }
 
 export async function setAccountRoute(match, account, proxyEnv = false) {

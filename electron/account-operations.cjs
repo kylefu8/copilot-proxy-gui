@@ -9,9 +9,25 @@ const WINDOWS_RESERVED_ACCOUNT_IDS = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/
 const ACCOUNT_DESCRIPTOR_KEYS = ['id', 'accountType', 'githubLogin', 'githubUserId', 'maxConcurrency']
 const ROUTE_KEYS = ['match', 'account']
 const REQUIRED_ROUTE_KEYS = ['surface', 'model']
+const MULTI_ACCOUNT_LOCK_NAMES = ['runtime.lock', 'accounts.lock']
+const GUI_BACKUP_PREFIX = 'accounts.json.gui-backup-'
 
 function isRecord(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function isAllowedGitHubVerificationUrl(value) {
+  try {
+    const url = new URL(String(value))
+    return url.protocol === 'https:'
+      && url.hostname.toLowerCase() === 'github.com'
+      && url.port === ''
+      && url.username === ''
+      && url.password === ''
+      && (url.pathname === '/login/device' || url.pathname === '/login/device/')
+  } catch {
+    return false
+  }
 }
 
 function getProxyDataDir({ env = process.env, platform = process.platform, homedir = os.homedir() } = {}) {
@@ -40,6 +56,170 @@ function getProxyDataDir({ env = process.env, platform = process.platform, homed
 
 function accountsConfigPath(dataDir) {
   return path.join(dataDir, 'accounts.json')
+}
+
+function readAccountsFileSnapshot(dataDir) {
+  const filePath = accountsConfigPath(dataDir)
+  let raw
+  let stat
+
+  try {
+    raw = fs.readFileSync(filePath)
+    stat = fs.statSync(filePath)
+  } catch (error) {
+    if (error && error.code === 'ENOENT') {
+      throw new Error('Cannot exit multi-account mode: accounts.json was not found.')
+    }
+    throw new Error('Cannot read accounts.json safely.', { cause: error })
+  }
+
+  let configuration
+  try {
+    configuration = JSON.parse(raw.toString('utf8'))
+  } catch (error) {
+    throw new Error('Cannot exit multi-account mode: accounts.json is invalid.', { cause: error })
+  }
+
+  return {
+    filePath,
+    raw,
+    stat,
+    configuration: normalizeAccountsConfiguration(configuration),
+  }
+}
+
+function sameAccountsFileSnapshot(left, right) {
+  return left.stat.dev === right.stat.dev
+    && left.stat.ino === right.stat.ino
+    && left.stat.size === right.stat.size
+    && left.stat.mtimeMs === right.stat.mtimeMs
+    && left.stat.ctimeMs === right.stat.ctimeMs
+    && Buffer.compare(left.raw, right.raw) === 0
+}
+
+function assertAccountsFileUnchanged(snapshot) {
+  let current
+  try {
+    current = readAccountsFileSnapshot(path.dirname(snapshot.filePath))
+  } catch (error) {
+    throw new Error('Cannot exit multi-account mode safely: accounts.json changed during the operation.', { cause: error })
+  }
+
+  if (!sameAccountsFileSnapshot(snapshot, current)) {
+    throw new Error('Cannot exit multi-account mode safely: accounts.json changed during the operation.')
+  }
+}
+
+function assertNoMultiAccountLocks(dataDir) {
+  for (const lockName of MULTI_ACCOUNT_LOCK_NAMES) {
+    const lockPath = path.join(dataDir, lockName)
+    try {
+      fs.lstatSync(lockPath)
+    } catch (error) {
+      if (error && error.code === 'ENOENT') continue
+      throw new Error(`Cannot inspect ${lockName} before exiting multi-account mode.`, { cause: error })
+    }
+    throw new Error(`Cannot exit multi-account mode while ${lockName} may indicate another proxy process or account write. Stop it and retry.`)
+  }
+}
+
+function readSingleAccountToken(dataDir, accountId) {
+  assertAccountId(accountId, 'configured account id')
+  const tokenPath = path.join(dataDir, 'tokens', accountId)
+  let token
+  try {
+    token = fs.readFileSync(tokenPath, 'utf8').trim()
+  } catch (error) {
+    if (error && error.code === 'ENOENT') {
+      throw new Error('Cannot exit multi-account mode: the account token file is missing.')
+    }
+    throw new Error('Cannot read the account token safely.', { cause: error })
+  }
+  if (!token) {
+    throw new Error('Cannot exit multi-account mode: the account token file is empty.')
+  }
+  return token
+}
+
+function pathExists(filePath) {
+  try {
+    fs.lstatSync(filePath)
+    return true
+  } catch (error) {
+    if (error && error.code === 'ENOENT') return false
+    throw error
+  }
+}
+
+function chooseGuiBackupPath(dataDir, timestamp = Date.now()) {
+  const safeTimestamp = Number.isFinite(Number(timestamp))
+    ? String(Math.trunc(Number(timestamp)))
+    : String(Date.now())
+
+  for (let sequence = 0; sequence < 10000; sequence += 1) {
+    const suffix = sequence === 0 ? '' : `-${sequence}`
+    const fileName = `${GUI_BACKUP_PREFIX}${safeTimestamp}${suffix}`
+    const candidate = path.join(dataDir, fileName)
+    if (!pathExists(candidate)) return candidate
+  }
+
+  throw new Error('Cannot choose a unique accounts.json backup name safely.')
+}
+
+function exitMultiAccountMode({
+  dataDir,
+  writeToken,
+  now = Date.now,
+} = {}) {
+  if (typeof writeToken !== 'function') {
+    throw new Error('A legacy token writer is required to exit multi-account mode.')
+  }
+
+  const resolvedDataDir = path.resolve(dataDir || getProxyDataDir())
+  assertNoMultiAccountLocks(resolvedDataDir)
+
+  const snapshot = readAccountsFileSnapshot(resolvedDataDir)
+  const accounts = snapshot.configuration.accounts
+  if (accounts.length !== 1) {
+    throw new Error('Cannot exit multi-account mode: exactly one configured account is required.')
+  }
+
+  const accountId = accounts[0].id
+  const token = readSingleAccountToken(resolvedDataDir, accountId)
+
+  // Recheck immediately before handing the token to Electron storage so a
+  // changed registry can never be silently converted using an old snapshot.
+  assertNoMultiAccountLocks(resolvedDataDir)
+  assertAccountsFileUnchanged(snapshot)
+  writeToken(token)
+
+  // The token has deliberately never been part of the return value or a
+  // child-process argument. Recheck both guards before the atomic rename.
+  assertNoMultiAccountLocks(resolvedDataDir)
+  assertAccountsFileUnchanged(snapshot)
+
+  let backupPath
+  for (let attempt = 0; attempt < 10000; attempt += 1) {
+    assertNoMultiAccountLocks(resolvedDataDir)
+    assertAccountsFileUnchanged(snapshot)
+    backupPath = chooseGuiBackupPath(resolvedDataDir, now())
+    try {
+      fs.renameSync(snapshot.filePath, backupPath)
+      break
+    } catch (error) {
+      if (error && (error.code === 'EEXIST' || error.code === 'ENOTEMPTY')) continue
+      throw new Error('Cannot back up accounts.json safely.', { cause: error })
+    }
+  }
+
+  if (!backupPath || pathExists(snapshot.filePath)) {
+    throw new Error('Cannot back up accounts.json safely.')
+  }
+
+  return {
+    ok: true,
+    backupFileName: path.basename(backupPath),
+  }
 }
 
 function copyKnownFields(value, keys) {
@@ -364,7 +544,28 @@ function redactCommandOutput(output, secrets = []) {
     const value = String(secret || '')
     if (value) result = result.split(value).join('[redacted]')
   }
+  // Strip ANSI CSI sequences (for example, red error backgrounds) after
+  // secret replacement so CLI diagnostics cannot leak terminal controls to
+  // the renderer or end up in a user-facing Error message.
+  result = result.replace(/\x1B\[[0-?]*[ -/]*[@-~]/g, '')
   return result.trim().slice(0, 2000)
+}
+
+function summarizeCommandFailure(output, secrets = []) {
+  const redacted = redactCommandOutput(output, secrets)
+  const lines = redacted.split(/\r?\n/).map(line => line.trim()).filter(Boolean)
+  const errorLine = lines.find(line => /\bERROR\b/i.test(line))
+  if (errorLine) {
+    return errorLine.replace(/^.*?\bERROR\b\s*/i, '').trim()
+  }
+  const usefulLine = lines.find(line => (
+    !/^i\s+/i.test(line)
+    && !/^info\s+/i.test(line)
+    && !/^configured copilot upstream/i.test(line)
+    && !/^using built-in longer/i.test(line)
+    && !/^change preview:/i.test(line)
+  ))
+  return usefulLine || redacted
 }
 
 module.exports = {
@@ -374,11 +575,14 @@ module.exports = {
   buildAccountActionCommand,
   buildAccountCommand,
   buildAccountCommandEnvironment,
+  exitMultiAccountMode,
   getProxyDataDir,
+  isAllowedGitHubVerificationUrl,
   normalizeAccountsConfiguration,
   parseJsonOutput,
   readAccountsSnapshot,
   redactCommandOutput,
+  summarizeCommandFailure,
   resolveProxyCommand,
   runProxyCommand,
 }

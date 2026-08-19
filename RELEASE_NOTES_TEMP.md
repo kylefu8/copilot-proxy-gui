@@ -1,39 +1,38 @@
 # What's New / 新功能
 
-## 👥 Multi-Account Management / 多账号管理
+## 👤 Single-Account Transition / 单账号切换
 
-• Added a complete GUI for up to eight GitHub Copilot accounts: add, migrate the current login, re-authenticate, set the default, and remove accounts / 新增最多八个 GitHub Copilot 账号的完整 GUI：添加、迁移当前登录、重新认证、设置默认账号及删除账号
-• Added ordered model-glob routing and account-scoped model catalog and usage views / 新增有序模型 glob 路由，以及按账号查看模型目录和用量
-• Models selected from a non-default account use the deterministic `<account>/<model>` selector while request headers and configured routes keep their upstream precedence / 从非默认账号选择的模型使用确定性的 `<account>/<model>` selector，同时保留请求头与已配置路由的上游优先级
+• Replaced the impossible “delete the only account” action with an explicit “Exit Multi-account” flow / 将必然失败的“删除唯一账号”操作改为明确的“退出多账号模式”流程
+• The final account token is first written to Electron encrypted storage, `accounts.json` is renamed to a timestamped backup, and account token files are preserved for recovery / 最后一个账号的 Token 会先写入 Electron 加密存储，`accounts.json` 改名为带时间戳的备份，并保留账号 Token 文件以便恢复
+• Added runtime/account-lock and configuration-snapshot checks so concurrent changes fail safely without removing the active configuration / 新增 runtime/account lock 与配置快照检查，并发变化时安全失败，不移除当前配置
+• Returning to multi-account mode remains available through “Migrate Current Login” or a fresh Device Flow login / 之后仍可通过“迁移当前登录”或重新执行 Device Flow 再次启用多账号模式
 
-## 🔗 Upstream Upgrade / 上游升级
+## 🧭 Clear Account Feedback / 清晰的账号反馈
 
-• Upgraded the embedded copilot-proxy from upstream `v0.9.3` to `v0.10.0`, including deterministic multi-account routing, account-scoped token recovery, model catalogs, readiness, diagnostics, and concurrency / 内嵌 copilot-proxy 从上游 `v0.9.3` 升级到 `v0.10.0`，包含确定性多账号路由、账号级 Token 恢复、模型目录、就绪检查、诊断与并发控制
-• Enabled Codex hosted tools in the proxy catalog and improved graceful shutdown and Windows owner-only state protection / 在代理目录中启用 Codex hosted tools，并改进优雅关闭与 Windows 仅所有者状态保护
-• Upstream removed legacy `start -d`; the GUI is unaffected because it has always managed a foreground child process / 上游移除了旧版 `start -d`；GUI 一直自行管理前台子进程，因此不受影响
+• Account CLI failures now remove ANSI terminal controls and diagnostic noise, then show actionable bilingual messages for duplicate identities, referenced accounts, invalid logins, and runtime locks / 账号 CLI 错误现在会移除 ANSI 控制码与诊断噪音，并针对重复身份、账号引用、登录失效及运行锁显示可操作的双语提示
+• Invalid GitHub credentials are shown as a direct re-authentication prompt instead of a raw `Failed to get GitHub user` model-command error / GitHub 凭据失效时直接提示重新登录，不再显示原始 `Failed to get GitHub user` 模型命令错误
+• A successfully loaded empty catalog now shows “No models available” with subscription/account-type guidance instead of remaining on “Loading model list” / 模型目录成功加载但为空时，显示“无可用模型”及订阅/账号类型提示，不再停留在“正在加载模型列表”
 
-## 🔐 Authentication & Compatibility / 认证与兼容性
+## 🔗 Device Verification / 设备验证
 
-• Existing single-account users remain on the encrypted one-shot `GH_TOKEN` flow until they explicitly enable multi-account mode / 现有单账号用户继续使用加密的一次性 `GH_TOKEN` 流程，只有主动启用多账号时才迁移
-• Explicit multi-account mode treats upstream `accounts.json` and owner-only `tokens/<account-id>` files as authoritative and never injects the legacy GUI token / 显式多账号模式以上游 `accounts.json` 与仅所有者可访问的 `tokens/<account-id>` 为准，不再注入旧 GUI Token
-• Account and route changes are disabled while the GUI proxy is running, matching upstream runtime-lock requirements / GUI 代理运行时禁用账号和路由写操作，与上游 runtime lock 要求保持一致
-• Routing is deterministic and does not provide automatic failover, load balancing, or quota pooling / 路由是确定性的，不提供自动故障转移、负载均衡或配额池化
+• Clicking the GitHub Device Flow verification link now always opens the system default browser and never navigates inside the verification-code popup / 点击 GitHub Device Flow 验证链接时始终使用系统默认浏览器，不再在验证码弹窗内导航
+• External navigation is restricted to the official `https://github.com/login/device` URL / 外部导航仅允许官方 `https://github.com/login/device` 地址
 
-## 💬 Preserved GUI Features / 保留的 GUI 功能
+## 🔧 Compatibility / 兼容性
 
-• Rebased the conversation recording middleware onto `conv-middleware-v0100` while keeping the proxy fork limited to `src/lib/conversation-middleware.ts` and `src/server.ts` / 将对话记录中间件重放到 `conv-middleware-v0100`，代理 fork 仍仅涉及 `src/lib/conversation-middleware.ts` 与 `src/server.ts`
-• Preserved loopback Host allowlisting, Claude Code launch/config integration, themes, tray controls, lightweight updates, and Electron `41.10.1` / Node `24.18.0` / 保留本地 Host 白名单、Claude Code 启动与配置、主题、托盘控制、轻量更新，以及 Electron `41.10.1` / Node `24.18.0`
+• Keeps the embedded `copilot-proxy` and conversation-recording fork unchanged from `v0.10.0` / 内嵌 `copilot-proxy` 与对话记录 fork 保持 `v0.10.0` 不变
+• Existing multi-account data, routes, themes, Claude Code integration, lightweight updates, and single-account authentication remain compatible / 现有多账号数据、路由、主题、Claude Code 集成、轻量更新及单账号认证保持兼容
 
 ## ⬇️ Download / 下载
 
 | Platform | File | Note |
 | -------- | ---- | ---- |
-| Windows (Installer) | Copilot.Proxy.GUI-0.10.0-setup.exe | **Recommended** / 推荐，supports lightweight update / 支持轻量更新 |
-| Windows (Portable) | Copilot.Proxy.GUI-0.10.0-portable.exe | No installation needed / 无需安装，双击即用 |
-| macOS (Apple Silicon) | Copilot.Proxy.GUI-0.10.0-arm64.dmg | M1/M2/M3/M4 Mac |
-| macOS (Intel) | Copilot.Proxy.GUI-0.10.0-x64.dmg | Intel Mac |
+| Windows (Installer) | Copilot.Proxy.GUI-0.10.0-1-setup.exe | **Recommended** / 推荐，supports lightweight update / 支持轻量更新 |
+| Windows (Portable) | Copilot.Proxy.GUI-0.10.0-1-portable.exe | No installation needed / 无需安装，双击即用 |
+| macOS (Apple Silicon) | Copilot.Proxy.GUI-0.10.0-1-arm64.dmg | M1/M2/M3/M4 Mac |
+| macOS (Intel) | Copilot.Proxy.GUI-0.10.0-1-x64.dmg | Intel Mac |
 
 > macOS first launch / macOS 首次启动: Right-click the app -> Open -> click "Open" in the dialog. If blocked, go to System Settings -> Privacy & Security -> click "Open Anyway".
 > 右键点击应用 -> 打开 -> 在弹窗中点击"打开"。如被阻止，前往系统设置 -> 隐私与安全性 -> 点击"仍要打开"。
 
-Full Changelog: [v0.9.3...v0.10.0](https://github.com/kylefu8/copilot-proxy-gui/compare/v0.9.3...v0.10.0)
+Full Changelog: [v0.10.0...v0.10.0-1](https://github.com/kylefu8/copilot-proxy-gui/compare/v0.10.0...v0.10.0-1)

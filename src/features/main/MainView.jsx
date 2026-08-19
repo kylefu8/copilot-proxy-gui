@@ -68,6 +68,7 @@ export function MainView({
   const explicitAccounts = !!accountsState?.explicit
   const configuredAccounts = accountsState?.accounts || []
 
+  const modelsLoaded = Array.isArray(models?.data)
   const hasModels = modelOptions.length > 0
   const hasAuth = explicitAccounts ? configuredAccounts.length > 0 : authStatus?.hasToken
 
@@ -275,7 +276,13 @@ export function MainView({
                 onChange={(e) => { onChangeAndSaveConfig('defaultModel', e.target.value); showToast(t('model.saved')) }}
                 disabled={!hasModels || modelsLoading}
               >
-                <option value="">{modelsLoading ? t('loading') : t('model.select')}</option>
+                <option value="">
+                  {modelsLoading
+                    ? t('loading')
+                    : modelsLoaded && !hasModels
+                      ? t('model.none')
+                      : t('model.select')}
+                </option>
                 {modelOptions.map(m => {
                   const ctx = m.capabilities?.limits?.max_context_window_tokens ?? m.contextWindow
                   const name = m.displayName && m.displayName !== m.id ? `${m.displayName} · ${m.id}` : m.id
@@ -291,7 +298,7 @@ export function MainView({
                 onChange={(e) => { onChangeAndSaveConfig('defaultSmallModel', e.target.value); showToast(t('model.saved')) }}
                 disabled={!hasModels || modelsLoading}
               >
-                <option value="">{t('model.optional')}</option>
+                <option value="">{modelsLoaded && !hasModels ? t('model.none') : t('model.optional')}</option>
                 {modelOptions.map(m => {
                   const ctx = m.capabilities?.limits?.max_context_window_tokens ?? m.contextWindow
                   const name = m.displayName && m.displayName !== m.id ? `${m.displayName} · ${m.id}` : m.id
@@ -302,9 +309,18 @@ export function MainView({
             </label>
           </div>
           {!hasAuth && !modelsLoading && !modelsError && <p className="hint">{t('model.loginFirst')}</p>}
-          {hasAuth && !hasModels && !modelsLoading && !modelsError && <p className="hint">{t('model.loadingList')}</p>}
+          {hasAuth && !modelsLoaded && !modelsLoading && !modelsError && <p className="hint">{t('model.loadingList')}</p>}
+          {hasAuth && modelsLoaded && !hasModels && !modelsLoading && !modelsError && <p className="hint">{t('model.noModels')}</p>}
           {hasAuth && hasModels && !config.defaultModel && !isRunning && <p className="hint">{t('model.selectFirst')}</p>}
-          {modelsError && <p className="error">{modelsError.key === 'tokenExpired' ? t('model.tokenExpired') : t('model.fetchError') + (modelsError.detail || '')}</p>}
+          {modelsError && (
+            <p className="error">
+              {modelsError.key === 'tokenExpired'
+                ? t('model.tokenExpired')
+                : modelsError.key === 'accountAuthInvalid'
+                  ? t('model.accountAuthInvalid')
+                  : t('model.fetchError') + (modelsError.detail || '')}
+            </p>
+          )}
           {config.appendLargeContextSuffix && contextWindow && contextWindow >= 1000000 && /^claude/i.test(bareModelId(config.defaultModel)) && (
             <p className="hint" style={{ color: 'var(--green)', margin: '4px 0 0' }}>
               ✅ {t('model.largeContext').replace('{size}', formatContextWindow(contextWindow))}
